@@ -20,10 +20,10 @@ import { getRandomGame } from "@/data/games";
 function LoadingDock({ name }: { name: string }) {
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8">
-      <div className="h-12 w-12 animate-pulse rounded-2xl bg-[var(--accent)]/40" />
-      <p className="font-display text-lg">Preparing {name}…</p>
-      <p className="text-sm text-muted">Loading game systems at the Port</p>
-      <Link to="/port" className="text-sm underline">
+      <div className="h-10 w-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--accent)]" />
+      <p className="pp-title-md">Preparing {name}…</p>
+      <p className="text-sm text-[var(--fg-muted)]">Loading game systems at the Port</p>
+      <Link to="/port" className="text-sm font-semibold text-[var(--accent)]">
         Return to Port
       </Link>
     </div>
@@ -32,9 +32,9 @@ function LoadingDock({ name }: { name: string }) {
 
 function GameErrorFallback({ name, onRetry }: { name: string; onRetry: () => void }) {
   return (
-    <div className="mx-auto max-w-md rounded-2xl surface p-6 text-center">
-      <h2 className="font-display text-xl font-bold">Could not launch {name}</h2>
-      <p className="mt-2 text-sm text-muted">
+    <div className="mx-auto max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6 text-center">
+      <h2 className="pp-title-lg">Could not launch {name}</h2>
+      <p className="mt-2 text-sm text-[var(--fg-muted)]">
         Something went wrong loading this terminal. Your other docks are still open.
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -73,15 +73,19 @@ class ShellErrorBoundary extends Component<
 
 function RulesModal({ game, onClose }: { game: GameDefinition; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-      <div className="w-full max-w-md rounded-3xl surface p-6" role="dialog" aria-label="Rules">
-        <h2 className="font-display text-xl font-bold">{game.name} rules</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+      <div
+        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
+        role="dialog"
+        aria-label="Rules"
+      >
+        <h2 className="pp-title-lg">{game.name} rules</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
           {game.rules.map((r) => (
             <li key={r}>{r}</li>
           ))}
         </ul>
-        <div className="mt-4 text-sm text-muted">
+        <div className="mt-4 text-sm text-[var(--fg-muted)]">
           <p className="font-semibold text-[var(--fg)]">Mobile</p>
           <p>Use touch targets and drag gestures described in the tutorial.</p>
           <p className="mt-2 font-semibold text-[var(--fg)]">Desktop</p>
@@ -171,19 +175,21 @@ export function GameShell({ game }: { game: GameDefinition }) {
   if (!started) {
     return (
       <div className="mx-auto max-w-lg safe-px py-8">
-        <button type="button" className="text-sm text-muted" onClick={() => navigate("/port")}>
+        <button
+          type="button"
+          className="text-sm font-medium text-[var(--fg-muted)]"
+          onClick={() => navigate("/port")}
+        >
           ← Back to Port
         </button>
-        <div className="mt-4 rounded-3xl surface p-6 shadow-[var(--shadow-dock)]">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: game.accent }}>
-            {category?.name}
-          </p>
-          <h1 className="mt-1 font-display text-3xl font-bold">{game.name}</h1>
-          <p className="mt-2 text-sm text-muted">{game.fullDescription}</p>
+        <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
+          <p className="pp-label">{category?.name}</p>
+          <h1 className="pp-display-sm mt-2">{game.name}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--fg-muted)]">{game.fullDescription}</p>
 
-          <label className="mt-6 block text-sm font-semibold">Mode</label>
+          <label className="mt-6 block text-sm font-semibold text-[var(--fg)]">Mode</label>
           <select
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-3"
+            className="pp-input mt-1.5 h-auto py-3"
             value={modeId}
             onChange={(e) => setModeId(e.target.value)}
           >
@@ -194,9 +200,9 @@ export function GameShell({ game }: { game: GameDefinition }) {
             ))}
           </select>
 
-          <label className="mt-4 block text-sm font-semibold">Difficulty</label>
+          <label className="mt-4 block text-sm font-semibold text-[var(--fg)]">Difficulty</label>
           <select
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-3"
+            className="pp-input mt-1.5 h-auto py-3"
             value={difficultyId}
             onChange={(e) => setDifficultyId(e.target.value)}
           >
@@ -231,21 +237,21 @@ export function GameShell({ game }: { game: GameDefinition }) {
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col">
-      <div className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 safe-px py-2">
-          <button type="button" className="touch-target rounded-xl surface px-3 text-sm" onClick={leave}>
+      <div className="sticky top-0 z-30 h-14 border-b border-[var(--border)] bg-[var(--bg)]">
+        <div className="mx-auto flex h-full max-w-5xl flex-wrap items-center gap-2 safe-px">
+          <button type="button" className="pp-icon-btn !w-auto px-3 text-sm font-medium" onClick={leave}>
             ← Port
           </button>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display font-semibold">{game.name}</p>
-            <p className="truncate text-xs text-muted">
+            <p className="truncate text-sm font-semibold text-[var(--fg)]">{game.name}</p>
+            <p className="truncate text-xs text-[var(--fg-muted)]">
               {category?.shortName} · {game.modes.find((m) => m.id === modeId)?.name} ·{" "}
               {game.difficulties.find((d) => d.id === difficultyId)?.name}
             </p>
           </div>
           <button
             type="button"
-            className="touch-target rounded-xl surface px-3 text-sm"
+            className="pp-icon-btn"
             aria-label="Toggle sound"
             onClick={() => {
               void audioManager.unlock();
@@ -254,28 +260,16 @@ export function GameShell({ game }: { game: GameDefinition }) {
           >
             {settings.masterSound ? "🔊" : "🔇"}
           </button>
-          <button
-            type="button"
-            className="touch-target rounded-xl surface px-3 text-sm"
-            onClick={() => setPaused((p) => !p)}
-          >
+          <button type="button" className="pp-icon-btn !w-auto px-3 text-sm" onClick={() => setPaused((p) => !p)}>
             {paused ? "Resume" : "Pause"}
           </button>
-          <button type="button" className="touch-target rounded-xl surface px-3 text-sm" onClick={restart}>
+          <button type="button" className="pp-icon-btn !w-auto px-3 text-sm" onClick={restart}>
             Restart
           </button>
-          <button
-            type="button"
-            className="touch-target rounded-xl surface px-3 text-sm"
-            onClick={() => setShowSettings(true)}
-          >
+          <button type="button" className="pp-icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
             ⚙
           </button>
-          <button
-            type="button"
-            className="touch-target rounded-xl surface px-3 text-sm"
-            onClick={() => void toggleFullscreen()}
-          >
+          <button type="button" className="pp-icon-btn" onClick={() => void toggleFullscreen()} aria-label="Fullscreen">
             ⛶
           </button>
         </div>
@@ -283,19 +277,17 @@ export function GameShell({ game }: { game: GameDefinition }) {
 
       {(session.score !== undefined || session.message) && (
         <div className="mx-auto flex w-full max-w-5xl flex-wrap gap-2 safe-px pt-3 text-sm">
-          {session.score !== undefined && (
-            <span className="rounded-full surface px-3 py-1">Score {session.score}</span>
-          )}
+          {session.score !== undefined && <span className="pp-badge">Score {session.score}</span>}
           {session.opponentScore !== undefined && (
-            <span className="rounded-full surface px-3 py-1">Opp {session.opponentScore}</span>
+            <span className="pp-badge">Opp {session.opponentScore}</span>
           )}
           {session.stats &&
             Object.entries(session.stats).map(([k, v]) => (
-              <span key={k} className="rounded-full surface px-3 py-1">
+              <span key={k} className="pp-badge">
                 {k}: {v}
               </span>
             ))}
-          <span className="rounded-full surface px-3 py-1">
+          <span className="pp-badge">
             {Math.floor(session.elapsedSeconds / 60)}:
             {String(session.elapsedSeconds % 60).padStart(2, "0")}
           </span>
@@ -304,9 +296,9 @@ export function GameShell({ game }: { game: GameDefinition }) {
 
       <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center safe-px py-4 safe-pb">
         {paused && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/80">
-            <div className="rounded-2xl surface p-6 text-center">
-              <p className="font-display text-xl font-bold">Paused</p>
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/90">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6 text-center">
+              <p className="pp-title-lg">Paused</p>
               <Button className="mt-4" onClick={() => setPaused(false)}>
                 Resume
               </Button>
@@ -340,24 +332,24 @@ export function GameShell({ game }: { game: GameDefinition }) {
       </div>
 
       {(session.status === "won" || session.status === "lost" || session.status === "draw") && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
           <div
-            className="w-full max-w-md rounded-3xl surface p-6 shadow-[var(--shadow-dock)]"
+            className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
             role="dialog"
             aria-label="Game result"
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Voyage complete</p>
-            <h2 className="mt-1 font-display text-2xl font-bold">
+            <p className="pp-label">Voyage complete</p>
+            <h2 className="pp-display-sm mt-1">
               {session.status === "won" ? "You win!" : session.status === "lost" ? "Defeat" : "Draw"}
             </h2>
             {session.score !== undefined && (
-              <p className="mt-2 text-sm">
+              <p className="mt-2 text-sm text-[var(--fg-muted)]">
                 Final score: {session.score}
                 {session.opponentScore !== undefined ? ` · Opponent ${session.opponentScore}` : ""}
               </p>
             )}
             {session.stats && (
-              <ul className="mt-3 space-y-1 text-sm text-muted">
+              <ul className="mt-3 space-y-1 text-sm text-[var(--fg-muted)]">
                 {Object.entries(session.stats).map(([k, v]) => (
                   <li key={k}>
                     {k}: {v}
@@ -394,10 +386,14 @@ export function GameShell({ game }: { game: GameDefinition }) {
       )}
 
       {showTutorial && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-md rounded-3xl surface p-6" role="dialog" aria-label="Tutorial">
-            <h2 className="font-display text-xl font-bold">First docking: {game.name}</h2>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+          <div
+            className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
+            role="dialog"
+            aria-label="Tutorial"
+          >
+            <h2 className="pp-title-lg">First docking: {game.name}</h2>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
               {game.tutorial.map((t) => (
                 <li key={t}>{t}</li>
               ))}
@@ -418,10 +414,13 @@ export function GameShell({ game }: { game: GameDefinition }) {
       {showRules && <RulesModal game={game} onClose={() => setShowRules(false)} />}
 
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-md rounded-3xl surface p-6" role="dialog">
-            <h2 className="font-display text-xl font-bold">Game settings</h2>
-            <label className="mt-4 flex items-center justify-between text-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+          <div
+            className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
+            role="dialog"
+          >
+            <h2 className="pp-title-lg">Game settings</h2>
+            <label className="mt-4 flex items-center justify-between text-sm text-[var(--fg)]">
               Hints
               <input
                 type="checkbox"
@@ -429,7 +428,7 @@ export function GameShell({ game }: { game: GameDefinition }) {
                 onChange={(e) => settings.setShowHints(e.target.checked)}
               />
             </label>
-            <label className="mt-3 flex items-center justify-between text-sm">
+            <label className="mt-3 flex items-center justify-between text-sm text-[var(--fg)]">
               Vibration
               <input
                 type="checkbox"

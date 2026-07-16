@@ -31,57 +31,40 @@ export function GameCard({ game, onRules }: { game: GameDefinition; onRules?: ()
   return (
     <article
       ref={ref}
-      className="group flex flex-col overflow-hidden rounded-2xl surface shadow-[var(--shadow-card)] transition hover:-translate-y-0.5"
+      className="group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)]"
       onMouseEnter={warm}
       onFocus={warm}
     >
       <GameIllustration game={game} />
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-3 p-6">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: game.accent }}>
+            <p className="pp-label">
               {category?.dockNumber} · {category?.shortName}
             </p>
-            <h3 className="font-display text-lg font-bold">{game.name}</h3>
+            <h3 className="pp-title-lg mt-1">{game.name}</h3>
           </div>
-          <div className="flex gap-1">
-            {game.featured && (
-              <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent)]">
-                Now Docking
-              </span>
-            )}
-            {game.isNew && (
-              <span className="rounded-full bg-lime-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-lime-600 dark:text-lime-300">
-                New
-              </span>
-            )}
+          <div className="flex flex-wrap gap-1.5">
+            {game.featured && <span className="pp-badge-yellow">Now Docking</span>}
+            {game.isNew && !game.featured && <span className="pp-badge-yellow">New</span>}
           </div>
         </div>
-        <p className="text-sm text-muted">{game.shortDescription}</p>
-        <div className="flex flex-wrap gap-2 text-xs text-muted">
-          <span className="rounded-full bg-[var(--bg-muted)] px-2 py-1">
+        <p className="text-sm leading-relaxed text-[var(--fg-muted)]">{game.shortDescription}</p>
+        <div className="flex flex-wrap gap-2">
+          <span className="pp-badge">
             {game.players.includes("local-multiplayer") ? "Solo / Local" : "Solo"}
           </span>
-          <span className="rounded-full bg-[var(--bg-muted)] px-2 py-1">
-            ~{game.estimatedMinutes} min
-          </span>
-          <span className="rounded-full bg-[var(--bg-muted)] px-2 py-1">
-            {game.difficulties.length} difficulties
-          </span>
+          <span className="pp-badge">~{game.estimatedMinutes} min</span>
+          <span className="pp-badge">{game.difficulties.length} difficulties</span>
         </div>
-        <div className="mt-auto flex flex-wrap gap-2 pt-1">
+        <div className="mt-auto flex flex-wrap gap-2 pt-2">
           <Button to={game.route} className="flex-1">
             Play
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => onRules?.()}
-            aria-label={`Rules for ${game.name}`}
-          >
+          <Button variant="secondary" onClick={() => onRules?.()} aria-label={`Rules for ${game.name}`}>
             Rules
           </Button>
         </div>
-        {/* keyboard path: Play is a real link */}
         <Link to={game.route} className="sr-only">
           Open {game.name}
         </Link>

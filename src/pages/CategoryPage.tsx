@@ -14,9 +14,9 @@ export function CategoryPage() {
 
   if (!category) {
     return (
-      <div className="mx-auto max-w-lg safe-px py-16 text-center">
-        <h1 className="font-display text-2xl font-bold">Dock not found</h1>
-        <Button to="/port" className="mt-4">
+      <div className="pp-container mx-auto max-w-lg safe-px py-16 text-center">
+        <h1 className="pp-display-sm">Dock not found</h1>
+        <Button to="/port" className="mt-6">
           Return to Port
         </Button>
       </div>
@@ -28,36 +28,29 @@ export function CategoryPage() {
   const future = comingSoonSlots.filter((s) => s.categoryId === category.id);
 
   return (
-    <div className="mx-auto max-w-6xl safe-px py-10">
-      <Link to="/port" className="text-sm text-muted">
+    <div className="pp-container safe-px pp-section">
+      <Link to="/port" className="text-sm font-medium text-[var(--fg-muted)]">
         ← Port
       </Link>
-      <div
-        className="mt-4 rounded-3xl border p-6 shadow-[var(--shadow-dock)]"
-        style={{ borderColor: `${category.accent}55`, background: `${category.accent}10` }}
-      >
-        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: category.accent }}>
-          Dock {category.dockNumber}
-        </p>
-        <h1 className="mt-2 font-display text-4xl font-bold">
-          <span className="mr-2" aria-hidden>
+
+      <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6 sm:p-8">
+        <p className="pp-label">Dock {category.dockNumber}</p>
+        <h1 className="pp-display-lg mt-2">
+          <span className="mr-2 text-[var(--fg-muted)]" aria-hidden>
             {category.icon}
           </span>
           {category.name}
         </h1>
-        <p className="mt-2 max-w-2xl text-muted">{category.description}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="inline-flex touch-target items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
-            style={{ background: category.accent }}
+        <p className="mt-3 max-w-2xl text-[var(--fg-muted)] leading-relaxed">{category.description}</p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Button
             onClick={() => {
               const g = getRandomGame((x) => x.categoryId === category.id);
               navigate(g.route);
             }}
           >
             Random in this dock
-          </button>
+          </Button>
           <Button variant="secondary" to="/port">
             All docks
           </Button>
@@ -65,77 +58,80 @@ export function CategoryPage() {
       </div>
 
       {suggested && (
-        <section className="mt-10">
-          <h2 className="font-display text-xl font-bold">Suggested departure</h2>
-          <div className="mt-4 max-w-md">
+        <section className="mt-14">
+          <p className="pp-label">Suggested</p>
+          <h2 className="pp-display-sm mt-2">Suggested departure</h2>
+          <div className="mt-6 max-w-md">
             <GameCard game={suggested} onRules={() => setRulesGame(suggested)} />
           </div>
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="font-display text-xl font-bold">Available games</h2>
-        <div className="mt-4 overflow-x-auto">
+      <section className="mt-14">
+        <p className="pp-label">Compare</p>
+        <h2 className="pp-display-sm mt-2">Available games</h2>
+        <div className="mt-6 overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)]">
           <table className="w-full min-w-[480px] text-left text-sm">
-            <thead className="text-muted">
+            <thead className="bg-[var(--bg-muted)] text-[var(--fg-muted)]">
               <tr>
-                <th className="py-2 pr-3">Game</th>
-                <th className="py-2 pr-3">Players</th>
-                <th className="py-2 pr-3">Duration</th>
-                <th className="py-2 pr-3">Tech</th>
+                <th className="px-4 py-3 font-medium">Game</th>
+                <th className="px-4 py-3 font-medium">Players</th>
+                <th className="px-4 py-3 font-medium">Duration</th>
+                <th className="px-4 py-3 font-medium">Tech</th>
               </tr>
             </thead>
             <tbody>
               {list.map((g) => (
                 <tr key={g.id} className="border-t border-[var(--border)]">
-                  <td className="py-3 pr-3 font-semibold">
+                  <td className="px-4 py-3 font-semibold text-[var(--fg)]">
                     <Link to={g.route}>{g.name}</Link>
                   </td>
-                  <td className="py-3 pr-3 text-muted">
+                  <td className="px-4 py-3 text-[var(--fg-muted)]">
                     {g.players.includes("local-multiplayer") ? "Solo / Local" : "Solo"}
                   </td>
-                  <td className="py-3 pr-3 text-muted">~{g.estimatedMinutes} min</td>
-                  <td className="py-3 pr-3 text-muted">{g.technology.join(", ")}</td>
+                  <td className="px-4 py-3 text-[var(--fg-muted)]">~{g.estimatedMinutes} min</td>
+                  <td className="px-4 py-3 text-[var(--fg-muted)]">{g.technology.join(", ")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
           {list.map((g) => (
             <GameCard key={g.id} game={g} onRules={() => setRulesGame(g)} />
           ))}
         </div>
       </section>
 
-      <section className="mt-12 rounded-2xl border border-dashed border-[var(--border)] p-5">
-        <h2 className="font-display text-lg font-bold">
-          {category.comingSoonLabel ?? "Expansion berths"}
-        </h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <section className="mt-14 rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] p-6">
+        <p className="pp-label">Expansion</p>
+        <h2 className="pp-title-lg mt-2">{category.comingSoonLabel ?? "Expansion berths"}</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {future.map((f) => (
-            <div key={f.name} className="rounded-xl bg-[var(--bg-muted)] p-4">
-              <p className="text-xs uppercase tracking-wider text-muted">Coming soon</p>
-              <p className="font-semibold">{f.name}</p>
-              <p className="text-sm text-muted">{f.blurb}</p>
+            <div key={f.name} className="rounded-[var(--radius-lg)] bg-[var(--bg-muted)] p-4">
+              <p className="pp-label">Coming soon</p>
+              <p className="pp-title-md mt-1">{f.name}</p>
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">{f.blurb}</p>
             </div>
           ))}
           {future.length === 0 && (
-            <p className="text-sm text-muted">More titles will dock here in a future release.</p>
+            <p className="text-sm text-[var(--fg-muted)]">
+              More titles will dock here in a future release.
+            </p>
           )}
         </div>
       </section>
 
       {rulesGame && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-md rounded-3xl surface p-6">
-            <h2 className="font-display text-xl font-bold">{rulesGame.name} rules</h2>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
+            <h2 className="pp-title-lg">{rulesGame.name} rules</h2>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
               {rulesGame.rules.map((r) => (
                 <li key={r}>{r}</li>
               ))}
             </ul>
-            <Button className="mt-5" onClick={() => setRulesGame(null)}>
+            <Button className="mt-6" onClick={() => setRulesGame(null)}>
               Close
             </Button>
           </div>

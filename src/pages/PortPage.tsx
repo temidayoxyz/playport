@@ -21,11 +21,10 @@ export function PortPage() {
     return games.filter((g) => {
       if (g.status !== "available") return false;
       if (category !== "all" && g.categoryId !== category) return false;
-      if (player === "solo" && !g.players.includes("solo") && g.players.length === 1 && g.players[0] !== "solo") {
-        // games with only vs-computer still playable solo-ish — keep
-      }
       if (player === "local" && !g.players.includes("local-multiplayer")) return false;
-      if (player === "vs-cpu" && !g.players.includes("vs-computer") && !g.players.includes("solo")) return false;
+      if (player === "vs-cpu" && !g.players.includes("vs-computer") && !g.players.includes("solo")) {
+        return false;
+      }
       if (duration === "short" && g.estimatedMinutes > 5) return false;
       if (duration === "medium" && (g.estimatedMinutes < 5 || g.estimatedMinutes > 10)) return false;
       if (duration === "long" && g.estimatedMinutes <= 10) return false;
@@ -50,23 +49,21 @@ export function PortPage() {
   const featured = getFeaturedGames()[0];
 
   return (
-    <div className="mx-auto max-w-6xl safe-px py-10">
+    <div className="pp-container safe-px pp-section">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--accent)]">
-            Arrival hall
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-bold">The Port</h1>
-          <p className="mt-2 max-w-2xl text-muted">
+          <p className="pp-label">Arrival hall</p>
+          <h1 className="pp-display-lg mt-2">The Port</h1>
+          <p className="mt-3 max-w-2xl text-[var(--fg-muted)] leading-relaxed">
             Search the terminals, filter by dock, and board any of{" "}
-            <strong className="text-[var(--fg)]">{games.length} available games</strong>. New berths open as the fleet grows.
+            <strong className="text-[var(--fg)] font-semibold">{games.length} available games</strong>.
+            New berths open as the fleet grows.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => {
-              const g = getRandomGame();
-              navigate(g.route);
+              navigate(getRandomGame().route);
             }}
           >
             Surprise Me
@@ -74,8 +71,7 @@ export function PortPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              const g = getRandomGame();
-              navigate(g.route);
+              navigate(getRandomGame().route);
             }}
           >
             Random game
@@ -83,22 +79,22 @@ export function PortPage() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-3 rounded-2xl surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-10 grid gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-sm sm:col-span-2">
-          <span className="text-muted">Search</span>
+          <span className="pp-caption">Search</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Find a game…"
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
+            className="pp-input mt-1.5"
           />
         </label>
         <label className="text-sm">
-          <span className="text-muted">Category</span>
+          <span className="pp-caption">Category</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
+            className="pp-input mt-1.5"
           >
             <option value="all">All docks</option>
             {categories.map((c) => (
@@ -109,23 +105,19 @@ export function PortPage() {
           </select>
         </label>
         <label className="text-sm">
-          <span className="text-muted">Players</span>
-          <select
-            value={player}
-            onChange={(e) => setPlayer(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
-          >
+          <span className="pp-caption">Players</span>
+          <select value={player} onChange={(e) => setPlayer(e.target.value)} className="pp-input mt-1.5">
             <option value="all">Any</option>
             <option value="local">Local multiplayer</option>
             <option value="vs-cpu">vs Computer / Solo</option>
           </select>
         </label>
         <label className="text-sm sm:col-span-2 lg:col-span-1">
-          <span className="text-muted">Duration</span>
+          <span className="pp-caption">Duration</span>
           <select
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
+            className="pp-input mt-1.5"
           >
             <option value="all">Any length</option>
             <option value="short">Quick (≤5 min)</option>
@@ -136,18 +128,20 @@ export function PortPage() {
       </div>
 
       {featured && (
-        <section className="mt-10">
-          <h2 className="font-display text-xl font-bold">Featured docking</h2>
-          <div className="mt-4 max-w-md">
+        <section className="mt-14">
+          <p className="pp-label">Featured docking</p>
+          <h2 className="pp-display-sm mt-2">Now boarding</h2>
+          <div className="mt-6 max-w-md">
             <GameCard game={featured} onRules={() => setRulesGame(featured)} />
           </div>
         </section>
       )}
 
       {recent.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-display text-xl font-bold">Recently played</h2>
-          <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="mt-14">
+          <p className="pp-label">History</p>
+          <h2 className="pp-display-sm mt-2">Recently played</h2>
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {recent.map((g) => (
               <GameCard key={g.id} game={g} onRules={() => setRulesGame(g)} />
             ))}
@@ -155,51 +149,61 @@ export function PortPage() {
         </section>
       )}
 
-      <section className="mt-12" id="categories">
-        <h2 className="font-display text-2xl font-bold">Category docks</h2>
-        <div className="mt-6 grid gap-6">
+      <section className="mt-16" id="categories">
+        <p className="pp-label">Map</p>
+        <h2 className="pp-display-sm mt-2">Category docks</h2>
+        <div className="mt-8 grid gap-6">
           {categories.map((c) => (
             <CategoryDock key={c.id} category={c} />
           ))}
         </div>
       </section>
 
-      <section className="mt-12" id="games">
+      <section className="mt-16" id="games">
         <div className="flex items-end justify-between gap-3">
-          <h2 className="font-display text-2xl font-bold">All terminals</h2>
-          <p className="text-sm text-muted">{filtered.length} shown</p>
+          <div>
+            <p className="pp-label">Directory</p>
+            <h2 className="pp-display-sm mt-2">All terminals</h2>
+          </div>
+          <p className="text-sm text-[var(--fg-muted)]">{filtered.length} shown</p>
         </div>
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((g) => (
             <GameCard key={g.id} game={g} onRules={() => setRulesGame(g)} />
           ))}
         </div>
       </section>
 
-      <section className="mt-14 rounded-3xl border border-dashed border-[var(--border)] p-6">
-        <h2 className="font-display text-xl font-bold">More ports opening soon</h2>
-        <p className="mt-1 text-sm text-muted">Under-construction berths — not yet playable.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mt-16 rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] p-6 sm:p-8">
+        <p className="pp-label">Expansion</p>
+        <h2 className="pp-display-sm mt-2">More ports opening soon</h2>
+        <p className="mt-2 text-sm text-[var(--fg-muted)]">
+          Under-construction berths — not yet playable.
+        </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {comingSoonSlots.map((slot) => (
-            <div key={slot.name} className="rounded-2xl bg-[var(--bg-muted)] p-4 opacity-90">
-              <p className="text-xs uppercase tracking-wider text-muted">Coming soon</p>
-              <p className="font-display font-semibold">{slot.name}</p>
-              <p className="text-sm text-muted">{slot.blurb}</p>
+            <div
+              key={slot.name}
+              className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-muted)] p-5"
+            >
+              <p className="pp-label">Coming soon</p>
+              <p className="pp-title-md mt-2">{slot.name}</p>
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">{slot.blurb}</p>
             </div>
           ))}
         </div>
       </section>
 
       {rulesGame && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-md rounded-3xl surface p-6">
-            <h2 className="font-display text-xl font-bold">{rulesGame.name} rules</h2>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
+            <h2 className="pp-title-lg">{rulesGame.name} rules</h2>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
               {rulesGame.rules.map((r) => (
                 <li key={r}>{r}</li>
               ))}
             </ul>
-            <Button className="mt-5" onClick={() => setRulesGame(null)}>
+            <Button className="mt-6" onClick={() => setRulesGame(null)}>
               Close
             </Button>
           </div>

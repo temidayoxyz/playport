@@ -1,14 +1,18 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, MouseEventHandler, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "on-yellow";
 
 const styles: Record<Variant, string> = {
   primary:
-    "bg-[var(--accent)] text-white hover:brightness-110 shadow-[var(--shadow-card)]",
-  secondary: "surface hover:bg-[var(--bg-muted)]",
-  ghost: "bg-transparent hover:bg-[var(--bg-muted)]",
-  danger: "bg-red-500/15 text-red-600 dark:text-red-300 hover:bg-red-500/25",
+    "bg-[var(--accent)] text-[var(--on-accent)] active:bg-[var(--accent-active)] border border-transparent",
+  secondary:
+    "bg-[var(--bg-elevated)] text-[var(--fg)] border border-[var(--border)] active:bg-[var(--bg-muted)]",
+  ghost: "bg-transparent text-[var(--fg)] border border-transparent active:bg-[var(--bg-muted)]",
+  danger:
+    "bg-transparent text-[var(--color-accent-rose)] border border-[var(--border)] active:bg-[var(--bg-muted)]",
+  "on-yellow":
+    "bg-[var(--bg)] text-[var(--fg)] border border-transparent active:opacity-90",
 };
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -18,14 +22,30 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = "primary", to, className = "", children, ...rest }: Props) {
-  const cls = `inline-flex touch-target items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${styles[variant]} ${className}`;
+  const cls = [
+    "inline-flex items-center justify-center gap-2",
+    "h-10 min-h-10 px-5",
+    "rounded-[var(--radius-md)]",
+    "text-sm font-semibold leading-none",
+    "transition-none",
+    "disabled:opacity-40 disabled:pointer-events-none",
+    styles[variant],
+    className,
+  ].join(" ");
+
   if (to) {
+    const { onClick } = rest;
     return (
-      <Link to={to} className={cls}>
+      <Link
+        to={to}
+        className={cls}
+        onClick={onClick as MouseEventHandler<HTMLAnchorElement> | undefined}
+      >
         {children}
       </Link>
     );
   }
+
   return (
     <button type="button" className={cls} {...rest}>
       {children}

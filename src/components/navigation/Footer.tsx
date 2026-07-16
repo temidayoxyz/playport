@@ -3,51 +3,68 @@ import { Logo } from "@/components/common/Logo";
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-[var(--border)] bg-[var(--bg-elevated)]">
-      <div className="mx-auto grid max-w-6xl gap-8 safe-px py-10 sm:grid-cols-3">
+    <footer className="mt-auto border-t border-[var(--border)] bg-[var(--bg)]">
+      <div className="pp-container grid gap-10 safe-px py-16 sm:grid-cols-3">
         <div>
           <Logo />
-          <p className="mt-3 text-sm text-muted">
+          <p className="mt-4 text-sm text-[var(--fg-muted)]">
             Pick a game. Enter the Port. Start playing.
           </p>
-          <p className="mt-2 text-sm text-muted italic">
+          <p className="mt-2 text-sm text-[var(--fg-soft)]">
             More games are always approaching the Port.
           </p>
         </div>
         <div>
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">
-            Navigate
-          </h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li><Link to="/port">Port</Link></li>
-            <li><Link to="/port#categories">Categories</Link></li>
-            <li><Link to="/about">About</Link></li>
-            <li><Link to="/how-to-play">How to Play</Link></li>
-            <li><Link to="/settings">Settings</Link></li>
+          <h2 className="pp-label">Navigate</h2>
+          <ul className="mt-4 space-y-2.5 text-sm text-[var(--fg-muted)]">
+            <li>
+              <Link to="/port" className="active:text-[var(--fg)]">
+                Port
+              </Link>
+            </li>
+            <li>
+              <Link to="/port#categories" className="active:text-[var(--fg)]">
+                Categories
+              </Link>
+            </li>
+            <li>
+              <Link to="/about" className="active:text-[var(--fg)]">
+                About
+              </Link>
+            </li>
+            <li>
+              <Link to="/how-to-play" className="active:text-[var(--fg)]">
+                How to Play
+              </Link>
+            </li>
+            <li>
+              <Link to="/settings" className="active:text-[var(--fg)]">
+                Settings
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">
-            Project
-          </h2>
-          <ul className="mt-3 space-y-2 text-sm">
+          <h2 className="pp-label">Project</h2>
+          <ul className="mt-4 space-y-2.5 text-sm text-[var(--fg-muted)]">
             <li>
               <a
-                href="https://github.com"
+                href="https://github.com/temidayoxyz/playport"
                 target="_blank"
                 rel="noreferrer"
-                className="underline-offset-2 hover:underline"
+                className="active:text-[var(--fg)]"
               >
                 GitHub
               </a>
             </li>
-            <li className="text-muted">
-              Privacy note: PlayPort stores preferences only on this device. No accounts. No tracking servers.
+            <li className="text-[var(--fg-soft)] leading-relaxed">
+              Privacy note: PlayPort stores preferences only on this device. No accounts. No
+              tracking servers.
             </li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-[var(--border)] py-4 text-center text-xs text-muted">
+      <div className="border-t border-[var(--border)] py-5 text-center text-[13px] text-[var(--fg-soft)]">
         © {new Date().getFullYear()} PlayPort · MIT Licence
       </div>
     </footer>
