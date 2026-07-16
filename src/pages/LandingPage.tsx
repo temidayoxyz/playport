@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/common/Button";
+import { Icon, Icons } from "@/components/common/Icon";
 import { HeroRadar } from "@/components/port/HeroRadar";
 import { CategoryDock } from "@/components/port/CategoryDock";
 import { GameCard } from "@/components/port/GameCard";
@@ -81,8 +82,12 @@ export function LandingPage() {
             <h2 className="pp-display-lg mt-2">Category docks</h2>
             <p className="mt-2 text-[var(--fg-muted)]">Five destinations. Ten games ready to board.</p>
           </div>
-          <Link to="/port" className="text-sm font-semibold text-[var(--accent)] underline-offset-4">
-            Open full Port map →
+          <Link
+            to="/port"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] underline-offset-4"
+          >
+            Open full Port map
+            <Icon icon={Icons.ArrowRight} size="sm" />
           </Link>
         </div>
         <div className="mt-10 grid gap-6">

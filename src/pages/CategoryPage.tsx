@@ -3,6 +3,7 @@ import { getCategoryBySlug } from "@/data/categories";
 import { comingSoonSlots, getGamesByCategory, getRandomGame } from "@/data/games";
 import { GameCard } from "@/components/port/GameCard";
 import { Button } from "@/components/common/Button";
+import { CategoryIcon, Icon, Icons } from "@/components/common/Icon";
 import { useState } from "react";
 import type { GameDefinition } from "@/types/game";
 
@@ -29,16 +30,18 @@ export function CategoryPage() {
 
   return (
     <div className="pp-container safe-px pp-section">
-      <Link to="/port" className="text-sm font-medium text-[var(--fg-muted)]">
-        ← Port
+      <Link
+        to="/port"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--fg-muted)]"
+      >
+        <Icon icon={Icons.ArrowLeft} size="sm" />
+        Port
       </Link>
 
       <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6 sm:p-8">
         <p className="pp-label">Dock {category.dockNumber}</p>
-        <h1 className="pp-display-lg mt-2">
-          <span className="mr-2 text-[var(--fg-muted)]" aria-hidden>
-            {category.icon}
-          </span>
+        <h1 className="pp-display-lg mt-2 flex items-center gap-3">
+          <CategoryIcon id={category.icon} size={28} className="text-[var(--fg-muted)]" />
           {category.name}
         </h1>
         <p className="mt-3 max-w-2xl text-[var(--fg-muted)] leading-relaxed">{category.description}</p>

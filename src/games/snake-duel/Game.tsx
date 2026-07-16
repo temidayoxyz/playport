@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameShellProps, GameSession } from "@/types/game";
 import { audioManager } from "@/lib/audio/audioManager";
 import { announce } from "@/lib/accessibility/announce";
+import { Icon, Icons } from "@/components/common/Icon";
 import {
   createSnake,
   mazeObstacles,
@@ -201,11 +202,39 @@ export default function SnakeDuelGame({
       {showPad && (
         <div className="grid grid-cols-3 gap-2">
           <span />
-          <button type="button" className="touch-target rounded-xl surface" onClick={() => steer("up")}>↑</button>
+          <button
+            type="button"
+            className="touch-target flex items-center justify-center rounded-xl surface"
+            aria-label="Up"
+            onClick={() => steer("up")}
+          >
+            <Icon icon={Icons.ArrowUp} size="md" />
+          </button>
           <span />
-          <button type="button" className="touch-target rounded-xl surface" onClick={() => steer("left")}>←</button>
-          <button type="button" className="touch-target rounded-xl surface" onClick={() => steer("down")}>↓</button>
-          <button type="button" className="touch-target rounded-xl surface" onClick={() => steer("right")}>→</button>
+          <button
+            type="button"
+            className="touch-target flex items-center justify-center rounded-xl surface"
+            aria-label="Left"
+            onClick={() => steer("left")}
+          >
+            <Icon icon={Icons.ArrowLeft} size="md" />
+          </button>
+          <button
+            type="button"
+            className="touch-target flex items-center justify-center rounded-xl surface"
+            aria-label="Down"
+            onClick={() => steer("down")}
+          >
+            <Icon icon={Icons.ArrowDown} size="md" />
+          </button>
+          <button
+            type="button"
+            className="touch-target flex items-center justify-center rounded-xl surface"
+            aria-label="Right"
+            onClick={() => steer("right")}
+          >
+            <Icon icon={Icons.ArrowRight} size="md" />
+          </button>
         </div>
       )}
     </div>

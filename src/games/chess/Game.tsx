@@ -9,9 +9,14 @@ import { applyUci, needsPromotion, pieceLabel } from "./engine/gameState";
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const RANKS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
-const PIECE_GLYPH: Record<string, string> = {
-  wp: "♙", wn: "♘", wb: "♗", wr: "♖", wq: "♕", wk: "♔",
-  bp: "♟", bn: "♞", bb: "♝", br: "♜", bq: "♛", bk: "♚",
+/** Letter marks — no emoji glyphs */
+const PIECE_MARK: Record<string, string> = {
+  p: "P",
+  n: "N",
+  b: "B",
+  r: "R",
+  q: "Q",
+  k: "K",
 };
 
 export default function ChessGame({
@@ -219,8 +224,10 @@ export default function ChessGame({
         }
       }
       return (Object.keys(start) as Array<keyof typeof start>)
-        .flatMap((t) => Array.from({ length: Math.max(0, start[t] - (have[t] ?? 0)) }, () => PIECE_GLYPH[`${color}${t}`]))
-        .join("");
+        .flatMap((t) =>
+          Array.from({ length: Math.max(0, start[t] - (have[t] ?? 0)) }, () => PIECE_MARK[t] ?? t),
+        )
+        .join(" ");
     };
     return { w: count("w"), b: count("b") };
   }, [game]);
@@ -253,9 +260,13 @@ export default function ChessGame({
         </div>
       )}
 
-      <div className="w-full text-xs text-muted flex justify-between">
-        <span aria-label="Captured by black">♟ {captured.w || "—"}</span>
-        <span aria-label="Captured by white">♙ {captured.b || "—"}</span>
+      <div className="flex w-full justify-between text-xs text-muted">
+        <span aria-label="Captured by black" className="font-mono">
+          Black took: {captured.w || "—"}
+        </span>
+        <span aria-label="Captured by white" className="font-mono">
+          White took: {captured.b || "—"}
+        </span>
       </div>
 
       <div
@@ -283,8 +294,14 @@ export default function ChessGame({
               } ${isSel ? "ring-2 ring-inset ring-yellow-300" : ""} ${isLast ? "bg-yellow-300/40" : ""}`}
             >
               {piece && (
-                <span className={piece.color === "w" ? "text-white drop-shadow" : "text-port-950"}>
-                  {PIECE_GLYPH[`${piece.color}${piece.type}`]}
+                <span
+                  className={`font-display font-bold leading-none ${
+                    piece.color === "w"
+                      ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
+                      : "text-[#0a0a0a]"
+                  }`}
+                >
+                  {PIECE_MARK[piece.type]}
                 </span>
               )}
               {isLegal && (
@@ -350,7 +367,7 @@ export default function ChessGame({
                   setPromotion(null);
                 }}
               >
-                {PIECE_GLYPH[`${game.turn()}${p}`]}
+                {PIECE_MARK[p]}
               </button>
             ))}
           </div>

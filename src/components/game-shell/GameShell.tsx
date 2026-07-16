@@ -15,6 +15,7 @@ import { useProgressStore } from "@/stores/progressStore";
 import { audioManager } from "@/lib/audio/audioManager";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { Button } from "@/components/common/Button";
+import { Icon, Icons } from "@/components/common/Icon";
 import { getRandomGame } from "@/data/games";
 
 function LoadingDock({ name }: { name: string }) {
@@ -177,10 +178,11 @@ export function GameShell({ game }: { game: GameDefinition }) {
       <div className="mx-auto max-w-lg safe-px py-8">
         <button
           type="button"
-          className="text-sm font-medium text-[var(--fg-muted)]"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--fg-muted)]"
           onClick={() => navigate("/port")}
         >
-          ← Back to Port
+          <Icon icon={Icons.ArrowLeft} size="sm" />
+          Back to Port
         </button>
         <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
           <p className="pp-label">{category?.name}</p>
@@ -239,8 +241,13 @@ export function GameShell({ game }: { game: GameDefinition }) {
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col">
       <div className="sticky top-0 z-30 h-14 border-b border-[var(--border)] bg-[var(--bg)]">
         <div className="mx-auto flex h-full max-w-5xl flex-wrap items-center gap-2 safe-px">
-          <button type="button" className="pp-icon-btn !w-auto px-3 text-sm font-medium" onClick={leave}>
-            ← Port
+          <button
+            type="button"
+            className="pp-icon-btn !w-auto gap-1.5 px-3 text-sm font-medium"
+            onClick={leave}
+          >
+            <Icon icon={Icons.ArrowLeft} size="sm" />
+            Port
           </button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[var(--fg)]">{game.name}</p>
@@ -252,25 +259,41 @@ export function GameShell({ game }: { game: GameDefinition }) {
           <button
             type="button"
             className="pp-icon-btn"
-            aria-label="Toggle sound"
+            aria-label={settings.masterSound ? "Mute sound" : "Unmute sound"}
             onClick={() => {
               void audioManager.unlock();
               settings.toggleSound();
             }}
           >
-            {settings.masterSound ? "🔊" : "🔇"}
+            <Icon icon={settings.masterSound ? Icons.VolumeOn : Icons.VolumeOff} size="md" />
           </button>
-          <button type="button" className="pp-icon-btn !w-auto px-3 text-sm" onClick={() => setPaused((p) => !p)}>
-            {paused ? "Resume" : "Pause"}
+          <button
+            type="button"
+            className="pp-icon-btn !w-auto gap-1.5 px-3 text-sm"
+            onClick={() => setPaused((p) => !p)}
+            aria-label={paused ? "Resume" : "Pause"}
+          >
+            <Icon icon={paused ? Icons.Play : Icons.Pause} size="sm" />
+            <span className="hidden sm:inline">{paused ? "Resume" : "Pause"}</span>
           </button>
           <button type="button" className="pp-icon-btn !w-auto px-3 text-sm" onClick={restart}>
             Restart
           </button>
-          <button type="button" className="pp-icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
-            ⚙
+          <button
+            type="button"
+            className="pp-icon-btn"
+            onClick={() => setShowSettings(true)}
+            aria-label="Settings"
+          >
+            <Icon icon={Icons.Settings} size="md" />
           </button>
-          <button type="button" className="pp-icon-btn" onClick={() => void toggleFullscreen()} aria-label="Fullscreen">
-            ⛶
+          <button
+            type="button"
+            className="pp-icon-btn"
+            onClick={() => void toggleFullscreen()}
+            aria-label="Fullscreen"
+          >
+            <Icon icon={Icons.Fullscreen} size="md" />
           </button>
         </div>
       </div>

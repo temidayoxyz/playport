@@ -92,6 +92,8 @@ export interface GameDefinition {
   preload?: () => Promise<unknown>;
 }
 
+export type CategoryIconId = "board" | "words" | "sports" | "arcade" | "puzzle";
+
 export interface CategoryDefinition {
   id: string;
   slug: string;
@@ -99,7 +101,7 @@ export interface CategoryDefinition {
   shortName: string;
   description: string;
   accent: string;
-  icon: string;
+  icon: CategoryIconId;
   dockNumber: string;
   comingSoonLabel?: string;
 }

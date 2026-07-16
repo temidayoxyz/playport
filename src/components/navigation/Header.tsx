@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/common/Button";
+import { Icon, Icons } from "@/components/common/Icon";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { audioManager } from "@/lib/audio/audioManager";
 
@@ -27,9 +28,7 @@ export function Header() {
             <NavLink
               key={l.to}
               to={l.to}
-              className={({ isActive }) =>
-                `pp-nav-link ${isActive ? "is-active" : ""}`
-              }
+              className={({ isActive }) => `pp-nav-link ${isActive ? "is-active" : ""}`}
             >
               {l.label}
             </NavLink>
@@ -45,15 +44,15 @@ export function Header() {
               toggleSound();
             }}
           >
-            {masterSound ? "🔊" : "🔇"}
+            <Icon icon={masterSound ? Icons.VolumeOn : Icons.VolumeOff} size="md" />
           </button>
           <button
             type="button"
             className="pp-icon-btn"
-            aria-label="Toggle theme"
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             onClick={toggleTheme}
           >
-            {theme === "dark" ? "☾" : "☀"}
+            <Icon icon={theme === "dark" ? Icons.Moon : Icons.Sun} size="md" />
           </button>
           <Button to="/port" className="hidden sm:inline-flex">
             Enter Port
@@ -65,7 +64,7 @@ export function Header() {
             aria-label="Open menu"
             onClick={() => setOpen((v) => !v)}
           >
-            ☰
+            <Icon icon={Icons.Menu} size="md" />
           </button>
         </div>
       </div>

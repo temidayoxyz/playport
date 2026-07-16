@@ -160,7 +160,7 @@ export default function PongGame({
         aria-label="Pong arena"
       />
       <p className="text-xs text-muted text-center">
-        Drag on the arena · W/S {local ? "left · ↑/↓ right" : "or arrows"}
+        Drag on the arena · W/S {local ? "left · arrow keys right" : "or arrow keys"}
       </p>
     </div>
   );

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { CategoryDefinition } from "@/types/game";
 import { getGamesByCategory } from "@/data/games";
 import { GameIllustration } from "@/components/common/GameIllustration";
+import { CategoryIcon } from "@/components/common/Icon";
 
 export function CategoryDock({ category }: { category: CategoryDefinition }) {
   const games = getGamesByCategory(category.id).filter((g) => g.status === "available");
@@ -11,10 +12,8 @@ export function CategoryDock({ category }: { category: CategoryDefinition }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="pp-label">Dock {category.dockNumber}</p>
-          <h3 className="pp-display-sm mt-2">
-            <span className="mr-2 text-[var(--fg-muted)]" aria-hidden>
-              {category.icon}
-            </span>
+          <h3 className="pp-display-sm mt-2 flex items-center gap-2.5">
+            <CategoryIcon id={category.icon} size="lg" className="text-[var(--fg-muted)]" />
             {category.name}
           </h3>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">

@@ -4,6 +4,7 @@ import type { Mesh } from "three";
 import type { GameShellProps, GameSession } from "@/types/game";
 import { audioManager } from "@/lib/audio/audioManager";
 import { announce } from "@/lib/accessibility/announce";
+import { Icon, Icons } from "@/components/common/Icon";
 import { resolveQuality, supportsWebGL } from "@/lib/performance/quality";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { computerShot, flightPoints, projectImpact, type Impact } from "./engine/projectile";
@@ -194,8 +195,11 @@ export default function ArcheryGame({
           <span className="rounded-full surface px-3 py-1.5">CPU {oppScore}</span>
         )}
         <span className="rounded-full surface px-3 py-1.5">Arrows {arrows}</span>
-        <span className="rounded-full surface px-3 py-1.5">
-          Wind {wind > 0 ? "→" : "←"} {Math.abs(wind).toFixed(2)}
+        <span className="inline-flex items-center gap-1.5 rounded-full surface px-3 py-1.5">
+          <Icon icon={Icons.Wind} size="sm" />
+          Wind
+          <Icon icon={wind > 0 ? Icons.ArrowRight : Icons.ArrowLeft} size="sm" />
+          {Math.abs(wind).toFixed(2)}
         </span>
         {timeLeft !== null && <span className="rounded-full surface px-3 py-1.5">{timeLeft}s</span>}
       </div>

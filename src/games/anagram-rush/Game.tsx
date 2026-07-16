@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameShellProps, GameSession } from "@/types/game";
 import { audioManager } from "@/lib/audio/audioManager";
 import { announce } from "@/lib/accessibility/announce";
+import { Icon, Icons } from "@/components/common/Icon";
 import {
   definitionsStub,
   isValidAnswer,
@@ -139,7 +140,10 @@ export default function AnagramRushGame({
           <span className="rounded-full surface px-3 py-1.5">{timeLeft}s</span>
         )}
         {modeId === "survival" && (
-          <span className="rounded-full surface px-3 py-1.5">❤ {3 - mistakes}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full surface px-3 py-1.5">
+            <Icon icon={Icons.Heart} size="sm" className="text-[var(--color-accent-rose)]" />
+            {3 - mistakes}
+          </span>
         )}
       </div>
 
