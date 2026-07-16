@@ -28,7 +28,8 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        # Prefer npm ci when lockfile is in sync; fall back for optional platform deps drift
+        run: npm ci || npm install
 
       - name: Test
         run: npm test
