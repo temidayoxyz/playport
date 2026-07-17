@@ -1,51 +1,49 @@
-import { categories } from "@/data/categories";
-import { games } from "@/data/games";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/common/Button";
 
 export function HowToPlayPage() {
   return (
-    <div className="pp-container mx-auto max-w-3xl safe-px pp-section">
+    <div className="pp-container mx-auto max-w-2xl safe-px pp-section">
       <p className="pp-label">Guide</p>
-      <h1 className="pp-display-md mt-2">How to Play</h1>
-      <ol className="mt-8 list-decimal space-y-3 pl-5 text-[var(--fg-muted)] leading-relaxed">
-        <li>
-          Open{" "}
-          <Link to="/port" className="font-semibold text-[var(--accent)]">
-            The Port
-          </Link>{" "}
-          and browse category docks.
-        </li>
-        <li>Choose a game card — hover or focus preloads the terminal.</li>
-        <li>Select mode and difficulty, then launch.</li>
-        <li>Use touch, mouse, or keyboard as listed on each game.</li>
-        <li>Adjust sound, theme, and accessibility in Settings.</li>
+      <h1 className="pp-display-md mt-2">How it works</h1>
+      <ol className="mt-8 space-y-6">
+        {[
+          {
+            n: "1",
+            t: "Enter the Port",
+            d: "Find all available games in one focused place.",
+          },
+          {
+            n: "2",
+            t: "Choose your play",
+            d: "Select a mode, difficulty, and the options that suit you.",
+          },
+          {
+            n: "3",
+            t: "Start instantly",
+            d: "Launch the game without registration or unnecessary setup.",
+          },
+        ].map((step) => (
+          <li key={step.n} className="flex gap-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]">
+              {step.n}
+            </span>
+            <div>
+              <h2 className="pp-title-md">{step.t}</h2>
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">{step.d}</p>
+            </div>
+          </li>
+        ))}
       </ol>
-
-      <h2 className="pp-display-sm mt-14">Docks</h2>
-      <ul className="mt-6 space-y-3">
-        {categories.map((c) => (
-          <li key={c.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-5">
-            <Link to={`/category/${c.slug}`} className="pp-title-md">
-              {c.name}
-            </Link>
-            <p className="mt-1 text-sm text-[var(--fg-muted)]">{c.description}</p>
-          </li>
-        ))}
-      </ul>
-
-      <h2 className="pp-display-sm mt-14">Games</h2>
-      <ul className="mt-6 grid gap-2 sm:grid-cols-2">
-        {games.map((g) => (
-          <li key={g.id}>
-            <Link
-              to={g.route}
-              className="block rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-semibold text-[var(--fg)] active:bg-[var(--bg-muted)]"
-            >
-              {g.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <p className="mt-8 text-sm text-[var(--fg-muted)]">
+        Prefer the short version?{" "}
+        <Link to="/" className="font-semibold text-[var(--fg)] underline underline-offset-3">
+          Back to home
+        </Link>
+      </p>
+      <Button to="/port" className="mt-8">
+        Enter the Port
+      </Button>
     </div>
   );
 }

@@ -1,108 +1,118 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/common/Button";
 import { Icon, Icons } from "@/components/common/Icon";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { audioManager } from "@/lib/audio/audioManager";
-
-const links = [
-  { to: "/port", label: "Port" },
-  { to: "/port#categories", label: "Categories" },
-  { to: "/how-to-play", label: "How to Play" },
-];
+import { getRandomGame } from "@/data/games";
 
 export function Header() {
-  const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
   const theme = useSettingsStore((s) => s.theme);
-  const masterSound = useSettingsStore((s) => s.masterSound);
   const toggleTheme = useSettingsStore((s) => s.toggleTheme);
-  const toggleSound = useSettingsStore((s) => s.toggleSound);
+  const isLanding = location.pathname === "/";
+  const isPortApp =
+    location.pathname.startsWith("/port") ||
+    location.pathname.startsWith("/category") ||
+    location.pathname.startsWith("/settings") ||
+    location.pathname.startsWith("/about");
+
+  if (isLanding) {
+    return (
+      <header className="sticky top-0 z-40 h-14 pp-glass border-b">
+        <div className="pp-container flex h-full items-center justify-between gap-3 safe-px">
+          <Logo />
+          <div className="flex items-center gap-1.5">
+            <a
+              href="#how-it-works"
+              className="pp-nav-link hidden sm:inline-flex"
+            >
+              How it works
+            </a>
+            <button
+              type="button"
+              className="pp-icon-btn"
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              onClick={toggleTheme}
+            >
+              <Icon icon={theme === "dark" ? Icons.Sun : Icons.Moon} size="md" />
+            </button>
+            <Button to="/port" size="sm" className="!h-10">
+              Enter the Port
+            </Button>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  if (isPortApp) {
+    return (
+      <header className="sticky top-0 z-40 h-14 pp-glass border-b">
+        <div className="pp-app flex h-full items-center justify-between gap-3 safe-px">
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo compact to="/port" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[var(--fg)]">
+                {location.pathname.startsWith("/settings")
+                  ? "Settings"
+                  : location.pathname.startsWith("/about")
+                    ? "About"
+                    : location.pathname.startsWith("/category")
+                      ? "Categories"
+                      : "The Port"}
+              </p>
+            </div>
+          </div>
+
+          <nav className="hidden items-center gap-0.5 md:flex" aria-label="Primary">
+            <NavLink to="/port" end className={({ isActive }) => `pp-nav-link ${isActive ? "is-active" : ""}`}>
+              Port
+            </NavLink>
+            <NavLink
+              to="/port?view=categories"
+              className={({ isActive }) => `pp-nav-link ${isActive || location.pathname.startsWith("/category") ? "is-active" : ""}`}
+            >
+              Categories
+            </NavLink>
+            <button
+              type="button"
+              className="pp-nav-link"
+              onClick={() => navigate(getRandomGame().route)}
+            >
+              Random
+            </button>
+            <NavLink to="/settings" className={({ isActive }) => `pp-nav-link ${isActive ? "is-active" : ""}`}>
+              Settings
+            </NavLink>
+          </nav>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="pp-icon-btn"
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              onClick={toggleTheme}
+            >
+              <Icon icon={theme === "dark" ? Icons.Sun : Icons.Moon} size="md" />
+            </button>
+            <Link to="/settings" className="pp-icon-btn md:hidden" aria-label="Settings">
+              <Icon icon={Icons.Settings} size="md" />
+            </Link>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
-    <header className="sticky top-0 z-40 h-16 border-b border-[var(--border)] bg-[var(--bg)]">
+    <header className="sticky top-0 z-40 h-14 pp-glass border-b">
       <div className="pp-container flex h-full items-center justify-between gap-3 safe-px">
         <Logo />
-        <nav className="hidden items-center gap-0.5 md:flex" aria-label="Primary">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              className={({ isActive }) => `pp-nav-link ${isActive ? "is-active" : ""}`}
-            >
-              {l.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="pp-icon-btn"
-            aria-label={masterSound ? "Mute sound" : "Unmute sound"}
-            onClick={() => {
-              void audioManager.unlock();
-              toggleSound();
-            }}
-          >
-            <Icon icon={masterSound ? Icons.VolumeOn : Icons.VolumeOff} size="md" />
-          </button>
-          <button
-            type="button"
-            className="pp-icon-btn"
-            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            onClick={toggleTheme}
-          >
-            <Icon icon={theme === "dark" ? Icons.Moon : Icons.Sun} size="md" />
-          </button>
-          <Button to="/port" className="hidden sm:inline-flex">
-            Enter Port
-          </Button>
-          <button
-            type="button"
-            className="pp-icon-btn md:hidden"
-            aria-expanded={open}
-            aria-label="Open menu"
-            onClick={() => setOpen((v) => !v)}
-          >
-            <Icon icon={Icons.Menu} size="md" />
-          </button>
-        </div>
+        <Button to="/port" size="sm">
+          Enter the Port
+        </Button>
       </div>
-      {open && (
-        <div className="border-b border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 md:hidden">
-          <nav className="flex flex-col gap-1" aria-label="Mobile">
-            {links.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className="rounded-[var(--radius-md)] px-3 py-3 text-sm font-medium text-[var(--fg)]"
-                onClick={() => setOpen(false)}
-              >
-                {l.label}
-              </Link>
-            ))}
-            <Link
-              to="/settings"
-              className="rounded-[var(--radius-md)] px-3 py-3 text-sm font-medium text-[var(--fg)]"
-              onClick={() => setOpen(false)}
-            >
-              Settings
-            </Link>
-            <Link
-              to="/about"
-              className="rounded-[var(--radius-md)] px-3 py-3 text-sm font-medium text-[var(--fg)]"
-              onClick={() => setOpen(false)}
-            >
-              About
-            </Link>
-            <div className="pt-2">
-              <Button to="/port" className="w-full" onClick={() => setOpen(false)}>
-                Enter Port
-              </Button>
-            </div>
-          </nav>
-        </div>
-      )}
     </header>
   );
 }

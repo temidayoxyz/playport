@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/playport/favicon.svg" />
@@ -9,22 +9,40 @@
     />
     <meta
       name="description"
-      content="PlayPort — a modern browser game arcade. Pick a game. Enter the Port. Start playing. No account, no download."
+      content="PlayPort — games ready when you are. Choose a game and start playing instantly. No account, no download."
     />
-    <meta name="theme-color" content="#0a0a0a" />
-    <meta property="og:title" content="PlayPort — Browser Game Arcade" />
+    <meta name="theme-color" content="#11120F" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F3F2EC" media="(prefers-color-scheme: light)" />
+    <meta property="og:title" content="PlayPort — Games ready when you are" />
     <meta
       property="og:description"
-      content="Pick a game. Enter the Port. Start playing. No account, no download."
+      content="Enter the Port, choose what you want to play, and start instantly."
     />
     <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <title>PlayPort — Browser Game Arcade</title>
+    <title>PlayPort — Games ready when you are</title>
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("playport:settings");
+          var theme = "light";
+          if (saved) {
+            var parsed = JSON.parse(saved);
+            if (parsed && (parsed.theme === "dark" || parsed.theme === "light")) {
+              theme = parsed.theme;
+            }
+          } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "dark";
+          }
+          if (theme === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

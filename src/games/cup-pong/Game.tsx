@@ -1,12 +1,7 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
-import type { Mesh } from "three";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameShellProps, GameSession } from "@/types/game";
 import { audioManager } from "@/lib/audio/audioManager";
 import { announce } from "@/lib/accessibility/announce";
-import { resolveQuality, supportsWebGL } from "@/lib/performance/quality";
-import { useSettingsStore } from "@/stores/settingsStore";
 import {
   aimToVelocity,
   computerAim,
@@ -16,69 +11,20 @@ import {
   nextShotState,
   stepBall,
   type BallState,
-  type Cup,
   type ShotState,
 } from "./engine/physics";
 
-function Scene({
-  cups,
-  ball,
-  preview,
-  reducedMotion,
-}: {
-  cups: Cup[];
-  ball: BallState;
-  preview: [number, number, number][];
-  reducedMotion: boolean;
-}) {
-  const ballRef = useRef<Mesh>(null);
-
-  useFrame(() => {
-    if (ballRef.current) {
-      ballRef.current.position.set(ball.pos.x, ball.pos.y, ball.pos.z);
-    }
-  });
-
-  return (
-    <>
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[3, 6, 2]} intensity={0.9} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -0.5]} receiveShadow>
-        <planeGeometry args={[6, 8]} />
-        <meshStandardMaterial color="#1e3a5f" />
-      </mesh>
-      <mesh position={[0, 0.05, 1.6]}>
-        <boxGeometry args={[2.2, 0.08, 1.2]} />
-        <meshStandardMaterial color="#8b5a2b" />
-      </mesh>
-      {cups.map((c) =>
-        c.hit ? null : (
-          <group key={c.id} position={[c.x, 0.2, c.z]}>
-            <mesh>
-              <cylinderGeometry args={[c.radius, c.radius * 0.85, 0.4, 16]} />
-              <meshStandardMaterial color="#f97316" />
-            </mesh>
-            <mesh position={[0, 0.18, 0]}>
-              <cylinderGeometry args={[c.radius * 0.75, c.radius * 0.75, 0.05, 16]} />
-              <meshStandardMaterial color="#0b1220" />
-            </mesh>
-          </group>
-        ),
-      )}
-      <mesh ref={ballRef} position={[ball.pos.x, ball.pos.y, ball.pos.z]}>
-        <sphereGeometry args={[ball.radius, 16, 16]} />
-        <meshStandardMaterial color="#f8fafc" />
-      </mesh>
-      {!reducedMotion &&
-        preview.map((p, i) => (
-          <mesh key={i} position={p}>
-            <sphereGeometry args={[0.03, 6, 6]} />
-            <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
-          </mesh>
-        ))}
-      <OrbitControls enablePan={false} enableZoom={false} maxPolarAngle={Math.PI / 2.2} minPolarAngle={Math.PI / 4} />
-    </>
-  );
+/** Project 3D table space (x,z,y) into 2.5D canvas coordinates. */
+function project(x: number, y: number, z: number, w: number, h: number) {
+  const scale = 48;
+  const cx = w * 0.5;
+  const cy = h * 0.72;
+  const depth = 1 + (z + 2.2) * 0.08;
+  return {
+    sx: cx + x * scale * depth,
+    sy: cy + z * scale * 0.72 - y * scale * 0.9,
+    s: Math.max(0.55, depth),
+  };
 }
 
 export default function CupPongGame({
@@ -88,10 +34,7 @@ export default function CupPongGame({
   sound = true,
   reducedMotion = false,
 }: GameShellProps) {
-  const qualityPref = useSettingsStore((s) => s.performanceQuality);
-  const quality = useMemo(() => resolveQuality(qualityPref, reducedMotion), [qualityPref, reducedMotion]);
-  const webgl = supportsWebGL();
-
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cups, setCups] = useState(() => createCups(modeId === "trick" ? "diamond" : "triangle"));
   const [ball, setBall] = useState<BallState>({
     pos: { x: 0, y: 0.35, z: 1.8 },
@@ -100,198 +43,358 @@ export default function CupPongGame({
     active: false,
   });
   const [shot, setShot] = useState<ShotState>("idle");
+  const [ballsLeft, setBallsLeft] = useState(modeId === "limited" ? 8 : 99);
   const [score, setScore] = useState(0);
-  const [ballsLeft, setBallsLeft] = useState(modeId === "limited" || modeId === "trick" ? 6 : 12);
+  const [oppScore, setOppScore] = useState(0);
+  const [turn, setTurn] = useState<"you" | "computer">("you");
   const [status, setStatus] = useState<GameSession["status"]>("playing");
-  const [aim, setAim] = useState({ dx: 0, dy: 0, power: 0 });
   const [elapsed, setElapsed] = useState(0);
+  const [aimLine, setAimLine] = useState<{ dx: number; dy: number; power: number } | null>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);
   const started = useRef(Date.now());
   const raf = useRef(0);
+  const ballRef = useRef(ball);
+  const cupsRef = useRef(cups);
+  const shotRef = useRef(shot);
+
+  ballRef.current = ball;
+  cupsRef.current = cups;
+  shotRef.current = shot;
+
+  const remaining = cups.filter((c) => !c.hit).length;
 
   const emit = useCallback(
     (partial: Partial<GameSession> = {}) => {
       onSessionChange?.({
         status,
         score,
+        opponentScore: modeId === "vs-computer" ? oppScore : undefined,
         elapsedSeconds: elapsed,
+        message: turn === "computer" ? "Computer is aiming" : remaining === 0 ? "Clear!" : undefined,
         stats: {
-          Cups: cups.filter((c) => !c.hit).length,
-          Balls: ballsLeft,
-          Shot: shot,
+          Cups: remaining,
+          Balls: modeId === "limited" ? ballsLeft : "∞",
         },
         ...partial,
       });
     },
-    [ballsLeft, cups, elapsed, onSessionChange, score, shot, status],
+    [ballsLeft, elapsed, modeId, onSessionChange, oppScore, remaining, score, status, turn],
   );
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setElapsed(Math.floor((Date.now() - started.current) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     emit();
   }, [emit]);
 
-  const preview = useMemo(() => {
-    if (difficultyId !== "easy" || shot !== "aiming") return [] as [number, number, number][];
-    const pts: [number, number, number][] = [];
-    let b: BallState = {
-      ...ball,
-      active: true,
-      vel: aimToVelocity(aim.dx, aim.dy, Math.max(0.35, aim.power), difficultyId),
-    };
-    for (let i = 0; i < 24; i++) {
-      b = stepBall(b, 0.04);
-      pts.push([b.pos.x, b.pos.y, b.pos.z]);
-    }
-    return pts;
-  }, [aim, ball, difficultyId, shot]);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (status !== "playing" || reducedMotion) return;
+      setElapsed(Math.floor((Date.now() - started.current) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [reducedMotion, status]);
 
-  const resetBall = useCallback(() => {
-    setBall({
-      pos: { x: 0, y: 0.35, z: 1.8 },
-      vel: { x: 0, y: 0, z: 0 },
-      radius: 0.12,
-      active: false,
-    });
-    setShot("idle");
-  }, []);
-
-  // flight loop
+  // Flight simulation
   useEffect(() => {
     if (shot !== "flying") return;
     let last = performance.now();
     const loop = (now: number) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
-      setBall((prev) => {
-        const next = stepBall(prev, dt);
-        const cupId = detectCupScore(next, cups);
-        if (cupId !== null) {
-          setCups((cs) => cs.map((c) => (c.id === cupId ? { ...c, hit: true } : c)));
-          setScore((s) => s + 100);
-          setShot(nextShotState("flying", "score"));
+      setBall((b) => {
+        if (!b.active) return b;
+        const next = stepBall(b, dt);
+        const hitId = detectCupScore(next, cupsRef.current);
+        if (hitId !== null) {
+          setCups((cs) => cs.map((c) => (c.id === hitId ? { ...c, hit: true } : c)));
+          setShot("scored");
+          shotRef.current = "scored";
           if (sound) audioManager.play("correct");
           announce("Cup scored");
-          window.setTimeout(() => {
-            const remaining = cups.filter((c) => !c.hit && c.id !== cupId);
-            if (remaining.length === 0) {
-              setStatus("won");
-              if (sound) audioManager.play("win");
-              emit({ status: "won", score: score + 100 });
-            } else {
-              resetBall();
-            }
-          }, 400);
-          return { ...next, active: false };
+          const isYou = turn === "you";
+          if (isYou) setScore((s) => s + 1);
+          else setOppScore((s) => s + 1);
+          return { ...next, active: false, vel: { x: 0, y: 0, z: 0 } };
         }
-        if (isMissed(next) || (Math.abs(next.vel.y) < 0.05 && next.pos.y <= next.radius + 0.01 && Math.hypot(next.vel.x, next.vel.z) < 0.15)) {
-          setShot(nextShotState("flying", "miss"));
+        if (isMissed(next)) {
+          setShot("missed");
+          shotRef.current = "missed";
           if (sound) audioManager.play("incorrect");
-          window.setTimeout(() => {
-            setBallsLeft((b) => {
-              const left = b - 1;
-              if (left <= 0) {
-                setStatus("lost");
-                if (sound) audioManager.play("lose");
-                emit({ status: "lost", score });
-              } else {
-                resetBall();
-              }
-              return left;
-            });
-          }, 350);
+          announce("Miss");
           return { ...next, active: false };
         }
         return next;
       });
-      raf.current = requestAnimationFrame(loop);
+      if (shotRef.current === "flying") {
+        raf.current = requestAnimationFrame(loop);
+      }
     };
     raf.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf.current);
-  }, [cups, emit, resetBall, score, shot, sound]);
+  }, [shot, sound, turn]);
 
-  // computer turn
+  // After score/miss — reset ball and check win
   useEffect(() => {
-    if (modeId !== "vs-computer" || shot !== "idle" || status !== "playing") return;
-    if (score % 200 !== 100) return; // simple alternate after player scores — skip for solo flow
-  }, [modeId, score, shot, status]);
+    if (shot !== "scored" && shot !== "missed") return;
+    const t = window.setTimeout(() => {
+      const left = cupsRef.current.filter((c) => !c.hit).length;
+      if (left === 0) {
+        setStatus("won");
+        emit({ status: "won" });
+        return;
+      }
+      if (modeId === "limited") {
+        setBallsLeft((n) => {
+          const next = n - 1;
+          if (next <= 0 && left > 0) {
+            setStatus("lost");
+            emit({ status: "lost" });
+          }
+          return next;
+        });
+      }
+      setBall({
+        pos: { x: 0, y: 0.35, z: 1.8 },
+        vel: { x: 0, y: 0, z: 0 },
+        radius: 0.12,
+        active: false,
+      });
+      setShot(nextShotState(shot, "reset"));
+      setAimLine(null);
+      if (modeId === "vs-computer" || modeId === "local") {
+        setTurn((t) => (t === "you" ? "computer" : "you"));
+      }
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [emit, modeId, shot]);
 
-  const fireComputer = () => {
-    const a = computerAim(difficultyId);
-    const vel = aimToVelocity(a.dx, a.dy, a.power, difficultyId);
-    setBall((b) => ({ ...b, active: true, vel, pos: { x: 0, y: 0.35, z: 1.8 } }));
-    setShot("flying");
+  // Computer turn
+  useEffect(() => {
+    if (turn !== "computer" || shot !== "idle" || status !== "playing") return;
+    if (modeId !== "vs-computer") return;
+    const t = window.setTimeout(() => {
+      const aim = computerAim(difficultyId);
+      const vel = aimToVelocity(aim.dx, aim.dy, aim.power, difficultyId);
+      setShot("flying");
+      setBall({
+        pos: { x: 0, y: 0.35, z: 1.8 },
+        vel,
+        radius: 0.12,
+        active: true,
+      });
+      if (sound) audioManager.play("whoosh");
+    }, 700);
+    return () => window.clearTimeout(t);
+  }, [difficultyId, modeId, shot, sound, status, turn]);
+
+  // Local multiplayer: "computer" slot is player 2
+  useEffect(() => {
+    if (modeId === "local" && turn === "computer" && shot === "idle") {
+      announce("Player 2 turn");
+    }
+  }, [modeId, shot, turn]);
+
+  // Draw
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const isDark = document.documentElement.classList.contains("dark");
+    const bg = isDark ? "#171814" : "#faf9f5";
+    const table = isDark ? "#2a3228" : "#d4cfc0";
+    const tableEdge = isDark ? "#3a4236" : "#c4bfb0";
+    const ink = isDark ? "#f5f4ee" : "#171814";
+    const accent = "#F59A51";
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Table surface (trapezoid)
+    ctx.beginPath();
+    ctx.moveTo(w * 0.12, h * 0.88);
+    ctx.lineTo(w * 0.88, h * 0.88);
+    ctx.lineTo(w * 0.72, h * 0.28);
+    ctx.lineTo(w * 0.28, h * 0.28);
+    ctx.closePath();
+    ctx.fillStyle = table;
+    ctx.fill();
+    ctx.strokeStyle = tableEdge;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Soft far shadow
+    ctx.fillStyle = isDark ? "rgba(0,0,0,0.2)" : "rgba(23,24,20,0.06)";
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, h * 0.36, w * 0.18, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cups back-to-front by z
+    const sorted = [...cups].filter((c) => !c.hit).sort((a, b) => a.z - b.z);
+    for (const cup of sorted) {
+      const p = project(cup.x, 0.2, cup.z, w, h);
+      const r = 16 * p.s;
+      // cup body
+      const grad = ctx.createLinearGradient(p.sx - r, p.sy - r * 1.6, p.sx + r, p.sy + r * 0.4);
+      grad.addColorStop(0, accent);
+      grad.addColorStop(1, "#d4783a");
+      ctx.beginPath();
+      ctx.moveTo(p.sx - r * 0.85, p.sy + r * 0.35);
+      ctx.lineTo(p.sx - r * 1.05, p.sy - r * 1.5);
+      ctx.quadraticCurveTo(p.sx, p.sy - r * 1.75, p.sx + r * 1.05, p.sy - r * 1.5);
+      ctx.lineTo(p.sx + r * 0.85, p.sy + r * 0.35);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+      // rim
+      ctx.beginPath();
+      ctx.ellipse(p.sx, p.sy - r * 1.5, r * 1.05, r * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = isDark ? "#1a120c" : "#3a2418";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(p.sx, p.sy - r * 1.5, r * 0.7, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fillStyle = isDark ? "#0e0c0a" : "#2a1a12";
+      ctx.fill();
+      // contact shadow
+      ctx.beginPath();
+      ctx.ellipse(p.sx, p.sy + r * 0.45, r * 0.9, r * 0.2, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,0,0,0.12)";
+      ctx.fill();
+    }
+
+    // Aim guide
+    if (aimLine && shot === "aiming" && !reducedMotion) {
+      const start = project(0, 0.35, 1.8, w, h);
+      const power = aimLine.power;
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(start.sx, start.sy);
+      ctx.lineTo(
+        start.sx + aimLine.dx * 80 * power,
+        start.sy - 40 * power - aimLine.dy * 40,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      // power bar
+      ctx.fillStyle = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
+      ctx.fillRect(w * 0.25, h - 28, w * 0.5, 6);
+      ctx.fillStyle = accent;
+      ctx.fillRect(w * 0.25, h - 28, w * 0.5 * power, 6);
+    }
+
+    // Ball
+    const bp = project(ball.pos.x, ball.pos.y, ball.pos.z, w, h);
+    const br = 10 * bp.s;
+    ctx.beginPath();
+    ctx.ellipse(bp.sx, bp.sy + br * 0.9, br * 0.85, br * 0.28, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fill();
+    const ballGrad = ctx.createRadialGradient(bp.sx - br * 0.3, bp.sy - br * 0.3, 1, bp.sx, bp.sy, br);
+    ballGrad.addColorStop(0, "#ffffff");
+    ballGrad.addColorStop(1, "#d8d6ce");
+    ctx.beginPath();
+    ctx.arc(bp.sx, bp.sy, br, 0, Math.PI * 2);
+    ctx.fillStyle = ballGrad;
+    ctx.fill();
+    ctx.strokeStyle = ink;
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Hint
+    if (shot === "idle" && turn === "you") {
+      ctx.fillStyle = isDark ? "rgba(245,244,238,0.45)" : "rgba(23,24,20,0.4)";
+      ctx.font = "500 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Drag back to aim · release to shoot", w / 2, h - 10);
+    }
+  }, [aimLine, ball, cups, reducedMotion, shot, turn]);
+
+  const pointerPos = (e: React.PointerEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  if (!webgl) {
-    return (
-      <div className="rounded-2xl surface p-6 text-center">
-        <p className="font-display text-lg">WebGL is required for Cup Pong</p>
-        <p className="mt-2 text-sm text-muted">Try another browser or enable hardware acceleration.</p>
-      </div>
-    );
-  }
+  const canAim =
+    shot === "idle" &&
+    status === "playing" &&
+    (turn === "you" || modeId === "local") &&
+    (modeId !== "limited" || ballsLeft > 0);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!canAim) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = pointerPos(e);
+    setShot("aiming");
+    setAimLine({ dx: 0, dy: 0, power: 0 });
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current || shot !== "aiming") return;
+    const p = pointerPos(e);
+    const dx = (drag.current.x - p.x) / 80;
+    const dy = (p.y - drag.current.y) / 100;
+    const power = Math.min(1, Math.hypot(dx, dy) / 1.2);
+    setAimLine({ dx: Math.max(-1, Math.min(1, dx)), dy: Math.max(-0.5, Math.min(0.5, dy)), power });
+  };
+
+  const onPointerUp = () => {
+    if (shot !== "aiming" || !aimLine) {
+      setShot("idle");
+      drag.current = null;
+      return;
+    }
+    const vel = aimToVelocity(aimLine.dx, -aimLine.dy, Math.max(0.25, aimLine.power), difficultyId);
+    setBall({
+      pos: { x: 0, y: 0.35, z: 1.8 },
+      vel,
+      radius: 0.12,
+      active: true,
+    });
+    setShot("flying");
+    drag.current = null;
+    if (sound) audioManager.play("whoosh");
+    announce("Ball released");
+  };
 
   return (
-    <div className="flex w-full max-w-lg flex-col gap-3">
-      <div className="flex flex-wrap justify-between gap-2 text-sm">
-        <span className="rounded-full surface px-3 py-1.5">Score {score}</span>
-        <span className="rounded-full surface px-3 py-1.5">Balls {ballsLeft}</span>
-        <span className="rounded-full surface px-3 py-1.5">Cups {cups.filter((c) => !c.hit).length}</span>
+    <div className="flex w-full max-w-lg flex-col items-center gap-2">
+      <div className="flex w-full items-center justify-between text-xs font-medium text-[var(--fg-muted)] px-1">
+        <span>
+          {modeId === "local"
+            ? turn === "you"
+              ? "Player 1"
+              : "Player 2"
+            : turn === "you"
+              ? "Your turn"
+              : "Computer is aiming"}
+        </span>
+        <span style={{ color: "#F59A51" }}>{remaining} cups left</span>
       </div>
-
-      <div
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl surface game-gesture"
-        onPointerDown={(e) => {
-          if (shot !== "idle" || status !== "playing") return;
-          drag.current = { x: e.clientX, y: e.clientY };
-          setShot(nextShotState("idle", "start-aim"));
-          setAim({ dx: 0, dy: 0, power: 0 });
-        }}
-        onPointerMove={(e) => {
-          if (!drag.current || shot !== "aiming") return;
-          const dx = (e.clientX - drag.current.x) / 120;
-          const dy = (e.clientY - drag.current.y) / 160;
-          const power = Math.min(1, Math.max(0, dy));
-          setAim({ dx: Math.max(-1, Math.min(1, -dx)), dy: 0, power });
-        }}
-        onPointerUp={() => {
-          if (shot !== "aiming") return;
-          drag.current = null;
-          const vel = aimToVelocity(aim.dx, aim.dy, Math.max(0.35, aim.power), difficultyId);
-          setBall((b) => ({ ...b, active: true, vel }));
-          setShot(nextShotState("aiming", "release"));
-          if (sound) audioManager.play("whoosh");
-        }}
-      >
-        <Canvas
-          dpr={quality.dpr}
-          camera={{ position: [0, 2.4, 3.6], fov: 45 }}
-          gl={{ antialias: quality.antialias, powerPreference: "high-performance" }}
-          onCreated={({ gl }) => {
-            gl.setClearColor("#0b1220");
-          }}
-        >
-          <Suspense fallback={null}>
-            <Scene cups={cups} ball={ball} preview={preview} reducedMotion={reducedMotion} />
-          </Suspense>
-        </Canvas>
-        <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-xs text-white/80">
-          {shot === "idle" ? "Drag to aim & set power" : shot === "aiming" ? `Power ${Math.round(aim.power * 100)}%` : shot}
-        </div>
-      </div>
-
-      {modeId === "vs-computer" && (
-        <button type="button" className="touch-target rounded-xl surface px-4 py-2 text-sm" onClick={fireComputer}>
-          Computer shot
-        </button>
-      )}
+      <canvas
+        ref={canvasRef}
+        className="game-gesture w-full touch-none rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--bg-elevated)]"
+        style={{ height: "min(58vh, 420px)", maxHeight: 420 }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        role="img"
+        aria-label="Cup Pong table. Drag to aim and release to shoot."
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { GameDefinition, GameSession } from "@/types/game";
 import { getCategoryById } from "@/data/categories";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -16,32 +16,32 @@ import { audioManager } from "@/lib/audio/audioManager";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { Button } from "@/components/common/Button";
 import { Icon, Icons } from "@/components/common/Icon";
+import { SegmentedControl } from "@/components/common/SegmentedControl";
+import { GameIllustration } from "@/components/common/GameIllustration";
+import { BottomSheet } from "@/components/common/BottomSheet";
 import { getRandomGame } from "@/data/games";
 
 function LoadingDock({ name }: { name: string }) {
   return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8">
-      <div className="h-10 w-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--accent)]" />
-      <p className="pp-title-md">Preparing {name}…</p>
-      <p className="text-sm text-[var(--fg-muted)]">Loading game systems at the Port</p>
-      <Link to="/port" className="text-sm font-semibold text-[var(--accent)]">
-        Return to Port
-      </Link>
+    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 p-8">
+      <div className="h-10 w-10 animate-pulse rounded-[12px] bg-[var(--accent)]" />
+      <p className="pp-title-md">Preparing {name}</p>
+      <p className="text-sm text-[var(--fg-muted)]">Setting the board…</p>
     </div>
   );
 }
 
 function GameErrorFallback({ name, onRetry }: { name: string; onRetry: () => void }) {
   return (
-    <div className="mx-auto max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6 text-center">
+    <div className="mx-auto max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-solid)] p-6 text-center">
       <h2 className="pp-title-lg">Could not launch {name}</h2>
       <p className="mt-2 text-sm text-[var(--fg-muted)]">
-        Something went wrong loading this terminal. Your other docks are still open.
+        Something went wrong. Your other games are still available.
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         <Button onClick={onRetry}>Try again</Button>
         <Button variant="secondary" to="/port">
-          Back to Port
+          Return to Port
         </Button>
       </div>
     </div>
@@ -72,36 +72,9 @@ class ShellErrorBoundary extends Component<
   }
 }
 
-function RulesModal({ game, onClose }: { game: GameDefinition; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div
-        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
-        role="dialog"
-        aria-label="Rules"
-      >
-        <h2 className="pp-title-lg">{game.name} rules</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
-          {game.rules.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-        <div className="mt-4 text-sm text-[var(--fg-muted)]">
-          <p className="font-semibold text-[var(--fg)]">Mobile</p>
-          <p>Use touch targets and drag gestures described in the tutorial.</p>
-          <p className="mt-2 font-semibold text-[var(--fg)]">Desktop</p>
-          <p>Mouse and keyboard shortcuts work where listed in-game.</p>
-        </div>
-        <Button className="mt-5" onClick={onClose}>
-          Close
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function GameShell({ game }: { game: GameDefinition }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const category = getCategoryById(game.categoryId);
   const settings = useSettingsStore();
   const recordPlay = useProgressStore((s) => s.recordPlay);
@@ -111,17 +84,27 @@ export function GameShell({ game }: { game: GameDefinition }) {
   const setPref = useProgressStore((s) => s.setGamePreference);
 
   const pref = getPref(game.id);
-  const defaultMode = game.modes.find((m) => m.default)?.id ?? game.modes[0]!.id;
+  const defaultMode =
+    searchParams.get("mode") ??
+    pref.modeId ??
+    game.modes.find((m) => m.default)?.id ??
+    game.modes[0]!.id;
   const defaultDiff =
-    game.difficulties.find((d) => d.recommended)?.id ?? game.difficulties[0]!.id;
+    searchParams.get("difficulty") ??
+    pref.difficultyId ??
+    game.difficulties.find((d) => d.recommended)?.id ??
+    game.difficulties[0]!.id;
 
-  const [modeId, setModeId] = useState(pref.modeId ?? defaultMode);
-  const [difficultyId, setDifficultyId] = useState(pref.difficultyId ?? defaultDiff);
-  const [started, setStarted] = useState(false);
+  const autoStart = searchParams.get("autostart") === "1";
+
+  const [modeId, setModeId] = useState(defaultMode);
+  const [difficultyId, setDifficultyId] = useState(defaultDiff);
+  const [started, setStarted] = useState(autoStart);
   const [session, setSession] = useState<GameSession>({ status: "idle", elapsedSeconds: 0 });
   const [showRules, setShowRules] = useState(false);
   const [showTutorial, setShowTutorial] = useState(!isTutorialComplete(game.id));
   const [showSettings, setShowSettings] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [gameKey, setGameKey] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -132,14 +115,24 @@ export function GameShell({ game }: { game: GameDefinition }) {
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (settings.confirmLeave && started && session.status === "playing") {
+      if (settings.confirmLeave && started && session.status === "playing" && !paused) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [session.status, settings.confirmLeave, started]);
+  }, [session.status, settings.confirmLeave, started, paused]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden && started && session.status === "playing") {
+        setPaused(true);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [session.status, started]);
 
   const onSessionChange = useCallback((s: GameSession) => {
     setSession(s);
@@ -156,6 +149,7 @@ export function GameShell({ game }: { game: GameDefinition }) {
       settings.confirmLeave &&
       started &&
       session.status === "playing" &&
+      !paused &&
       !window.confirm("Leave this active game and return to the Port?")
     ) {
       return;
@@ -165,94 +159,106 @@ export function GameShell({ game }: { game: GameDefinition }) {
 
   const GameComponent = game.component;
 
-  const loadingName = game.technology.includes("threejs")
-    ? game.id === "archery"
-      ? "the archery range"
-      : "the cup table"
-    : game.id === "chess"
-      ? "the chess engine"
-      : game.name;
-
   if (!started) {
     return (
-      <div className="mx-auto max-w-lg safe-px py-8">
+      <div className="mx-auto max-w-md safe-px py-6">
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--fg-muted)]"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--fg-muted)]"
           onClick={() => navigate("/port")}
         >
-          <Icon icon={Icons.ArrowLeft} size="sm" />
-          Back to Port
+          <Icon icon={Icons.ChevronLeft} size={18} />
+          Port
         </button>
-        <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
-          <p className="pp-label">{category?.name}</p>
-          <h1 className="pp-display-sm mt-2">{game.name}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--fg-muted)]">{game.fullDescription}</p>
 
-          <label className="mt-6 block text-sm font-semibold text-[var(--fg)]">Mode</label>
-          <select
-            className="pp-input mt-1.5 h-auto py-3"
-            value={modeId}
-            onChange={(e) => setModeId(e.target.value)}
-          >
-            {game.modes.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} — {m.description}
-              </option>
-            ))}
-          </select>
+        <div className="mt-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface-solid)] shadow-[var(--shadow-sm)]">
+          <GameIllustration game={game} className="!aspect-[16/10]" />
+          <div className="p-5">
+            <p className="pp-caption" style={{ color: category?.accent }}>
+              {category?.name}
+            </p>
+            <h1 className="pp-title-lg mt-1">{game.name}</h1>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--fg-muted)]">
+              {game.shortDescription}
+            </p>
 
-          <label className="mt-4 block text-sm font-semibold text-[var(--fg)]">Difficulty</label>
-          <select
-            className="pp-input mt-1.5 h-auto py-3"
-            value={difficultyId}
-            onChange={(e) => setDifficultyId(e.target.value)}
-          >
-            {game.difficulties.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} — {d.description}
-              </option>
-            ))}
-          </select>
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-semibold text-[var(--fg)]">Mode</p>
+              <SegmentedControl
+                ariaLabel="Mode"
+                value={modeId}
+                onChange={setModeId}
+                options={game.modes.map((m) => ({
+                  id: m.id,
+                  label: m.name,
+                  description: m.description,
+                }))}
+              />
+            </div>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                setPref(game.id, { modeId, difficultyId });
-                setStarted(true);
-                setSession({ status: "playing", elapsedSeconds: 0 });
-                audioManager.play("click");
-              }}
-            >
-              Launch game
-            </Button>
-            <Button variant="secondary" onClick={() => setShowRules(true)}>
-              Rules
-            </Button>
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-semibold text-[var(--fg)]">Difficulty</p>
+              <SegmentedControl
+                ariaLabel="Difficulty"
+                value={difficultyId}
+                onChange={setDifficultyId}
+                options={game.difficulties.map((d) => ({
+                  id: d.id,
+                  label: d.name,
+                  description: d.description,
+                }))}
+              />
+              <p className="mt-2 text-xs text-[var(--fg-muted)]">
+                {game.difficulties.find((d) => d.id === difficultyId)?.description}
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-2">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  setPref(game.id, { modeId, difficultyId });
+                  setStarted(true);
+                  setSession({ status: "playing", elapsedSeconds: 0 });
+                  audioManager.play("click");
+                }}
+              >
+                Start game
+              </Button>
+              <Button variant="ghost" onClick={() => setShowRules(true)}>
+                Rules
+              </Button>
+            </div>
           </div>
         </div>
 
-        {showRules && <RulesModal game={game} onClose={() => setShowRules(false)} />}
+        <BottomSheet open={showRules} onClose={() => setShowRules(false)} title={`${game.name} rules`}>
+          <ul className="list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
+            {game.rules.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </BottomSheet>
       </div>
     );
   }
 
+  const resultOpen =
+    session.status === "won" || session.status === "lost" || session.status === "draw";
+
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col">
-      <div className="sticky top-0 z-30 h-14 border-b border-[var(--border)] bg-[var(--bg)]">
-        <div className="mx-auto flex h-full max-w-5xl flex-wrap items-center gap-2 safe-px">
-          <button
-            type="button"
-            className="pp-icon-btn !w-auto gap-1.5 px-3 text-sm font-medium"
-            onClick={leave}
-          >
-            <Icon icon={Icons.ArrowLeft} size="sm" />
-            Port
+    <div className="flex min-h-dvh flex-col bg-[var(--bg)]">
+      {/* Top bar */}
+      <div className="sticky top-0 z-30 h-14 pp-glass border-b">
+        <div className="mx-auto flex h-full max-w-3xl items-center gap-1 safe-px">
+          <button type="button" className="pp-icon-btn" onClick={leave} aria-label="Back to Port">
+            <Icon icon={Icons.ChevronLeft} size={22} />
           </button>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 px-1">
             <p className="truncate text-sm font-semibold text-[var(--fg)]">{game.name}</p>
-            <p className="truncate text-xs text-[var(--fg-muted)]">
-              {category?.shortName} · {game.modes.find((m) => m.id === modeId)?.name} ·{" "}
+            <p className="truncate text-[11px] text-[var(--fg-muted)]">
+              {game.modes.find((m) => m.id === modeId)?.name} ·{" "}
               {game.difficulties.find((d) => d.id === difficultyId)?.name}
             </p>
           </div>
@@ -269,38 +275,35 @@ export function GameShell({ game }: { game: GameDefinition }) {
           </button>
           <button
             type="button"
-            className="pp-icon-btn !w-auto gap-1.5 px-3 text-sm"
-            onClick={() => setPaused((p) => !p)}
-            aria-label={paused ? "Resume" : "Pause"}
+            className="pp-icon-btn"
+            onClick={() => setPaused(true)}
+            aria-label="Pause"
           >
-            <Icon icon={paused ? Icons.Play : Icons.Pause} size="sm" />
-            <span className="hidden sm:inline">{paused ? "Resume" : "Pause"}</span>
-          </button>
-          <button type="button" className="pp-icon-btn !w-auto px-3 text-sm" onClick={restart}>
-            Restart
+            <Icon icon={Icons.Pause} size="md" />
           </button>
           <button
             type="button"
             className="pp-icon-btn"
-            onClick={() => setShowSettings(true)}
-            aria-label="Settings"
+            onClick={() => setShowMore(true)}
+            aria-label="More"
           >
-            <Icon icon={Icons.Settings} size="md" />
-          </button>
-          <button
-            type="button"
-            className="pp-icon-btn"
-            onClick={() => void toggleFullscreen()}
-            aria-label="Fullscreen"
-          >
-            <Icon icon={Icons.Fullscreen} size="md" />
+            <Icon icon={Icons.SlidersHorizontal} size="md" />
           </button>
         </div>
       </div>
 
-      {(session.score !== undefined || session.message) && (
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap gap-2 safe-px pt-3 text-sm">
-          {session.score !== undefined && <span className="pp-badge">Score {session.score}</span>}
+      {/* Info bar */}
+      {(session.score !== undefined ||
+        session.message ||
+        session.stats ||
+        session.elapsedSeconds > 0) && (
+        <div className="mx-auto flex w-full max-w-3xl flex-wrap gap-1.5 safe-px pt-2.5 text-xs">
+          {session.message && (
+            <span className="pp-badge-accent !text-[11px]">{session.message}</span>
+          )}
+          {session.score !== undefined && (
+            <span className="pp-badge">Score {session.score}</span>
+          )}
           {session.opponentScore !== undefined && (
             <span className="pp-badge">Opp {session.opponentScore}</span>
           )}
@@ -317,20 +320,10 @@ export function GameShell({ game }: { game: GameDefinition }) {
         </div>
       )}
 
-      <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center safe-px py-4 safe-pb">
-        {paused && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/90">
-            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6 text-center">
-              <p className="pp-title-lg">Paused</p>
-              <Button className="mt-4" onClick={() => setPaused(false)}>
-                Resume
-              </Button>
-            </div>
-          </div>
-        )}
-
+      {/* Game surface */}
+      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center safe-px py-3">
         <ShellErrorBoundary name={game.name}>
-          <Suspense fallback={<LoadingDock name={loadingName} />}>
+          <Suspense fallback={<LoadingDock name={game.name} />}>
             <GameComponent
               key={gameKey}
               modeId={modeId}
@@ -338,133 +331,218 @@ export function GameShell({ game }: { game: GameDefinition }) {
               onSessionChange={onSessionChange}
               onRequestExit={leave}
               sound={settings.masterSound}
-              reducedMotion={settings.reducedMotion}
+              reducedMotion={settings.reducedMotion || paused}
               showHints={settings.showHints}
             />
           </Suspense>
         </ShellErrorBoundary>
       </div>
 
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-center gap-2 safe-px pb-4 safe-pb md:hidden">
-        <Button variant="secondary" onClick={restart}>
-          Restart
-        </Button>
-        <Button variant="secondary" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
-      </div>
-
-      {(session.status === "won" || session.status === "lost" || session.status === "draw") && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-          <div
-            className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
-            role="dialog"
-            aria-label="Game result"
+      {/* Pause sheet */}
+      <BottomSheet open={paused && !resultOpen} onClose={() => setPaused(false)} title="Paused" centered>
+        <div className="flex flex-col gap-2 pt-1">
+          <Button size="lg" className="w-full" onClick={() => setPaused(false)}>
+            Resume
+          </Button>
+          <Button variant="secondary" className="w-full" onClick={restart}>
+            Restart
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              void audioManager.unlock();
+              settings.toggleSound();
+            }}
           >
-            <p className="pp-label">Voyage complete</p>
-            <h2 className="pp-display-sm mt-1">
-              {session.status === "won" ? "You win!" : session.status === "lost" ? "Defeat" : "Draw"}
-            </h2>
-            {session.score !== undefined && (
-              <p className="mt-2 text-sm text-[var(--fg-muted)]">
-                Final score: {session.score}
-                {session.opponentScore !== undefined ? ` · Opponent ${session.opponentScore}` : ""}
-              </p>
-            )}
-            {session.stats && (
-              <ul className="mt-3 space-y-1 text-sm text-[var(--fg-muted)]">
-                {Object.entries(session.stats).map(([k, v]) => (
-                  <li key={k}>
-                    {k}: {v}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button onClick={restart}>Play again</Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setStarted(false);
-                  setSession({ status: "idle", elapsedSeconds: 0 });
-                }}
-              >
-                Change mode
-              </Button>
-              <Button variant="secondary" to="/port">
-                Return to Port
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  const next = getRandomGame((g) => g.id !== game.id);
-                  navigate(next.route);
-                }}
-              >
-                Try another
-              </Button>
-            </div>
-          </div>
+            Sound: {settings.masterSound ? "On" : "Off"}
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setPaused(false);
+              setShowSettings(true);
+            }}
+          >
+            Game settings
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setPaused(false);
+              setShowRules(true);
+            }}
+          >
+            Rules
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={leave}>
+            Return to Port
+          </Button>
         </div>
-      )}
+      </BottomSheet>
 
-      {showTutorial && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-          <div
-            className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
-            role="dialog"
-            aria-label="Tutorial"
-          >
-            <h2 className="pp-title-lg">First docking: {game.name}</h2>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
-              {game.tutorial.map((t) => (
-                <li key={t}>{t}</li>
+      {/* Result sheet */}
+      <BottomSheet
+        open={resultOpen}
+        onClose={() => {}}
+        title={
+          session.status === "won"
+            ? "You win"
+            : session.status === "lost"
+              ? "Defeat"
+              : session.status === "draw"
+                ? "Draw"
+                : "Complete"
+        }
+        centered
+      >
+        <div className="text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--accent)_30%,var(--surface-solid))]">
+            <Icon icon={Icons.Trophy} size={22} />
+          </div>
+          {session.score !== undefined && (
+            <p className="text-sm text-[var(--fg-muted)]">
+              Final score: <strong className="text-[var(--fg)]">{session.score}</strong>
+              {session.opponentScore !== undefined ? ` · Opponent ${session.opponentScore}` : ""}
+            </p>
+          )}
+          {session.stats && (
+            <ul className="mt-3 space-y-1 text-sm text-[var(--fg-muted)]">
+              {Object.entries(session.stats).map(([k, v]) => (
+                <li key={k}>
+                  {k}: {v}
+                </li>
               ))}
             </ul>
-            <Button
-              className="mt-5"
-              onClick={() => {
-                markTutorial(game.id);
-                setShowTutorial(false);
-              }}
-            >
-              Got it
-            </Button>
-          </div>
+          )}
         </div>
-      )}
-
-      {showRules && <RulesModal game={game} onClose={() => setShowRules(false)} />}
-
-      {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-          <div
-            className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-elevated)] p-6"
-            role="dialog"
+        <div className="mt-5 flex flex-col gap-2">
+          <Button size="lg" className="w-full" onClick={restart}>
+            Play again
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setStarted(false);
+              setSession({ status: "idle", elapsedSeconds: 0 });
+            }}
           >
-            <h2 className="pp-title-lg">Game settings</h2>
-            <label className="mt-4 flex items-center justify-between text-sm text-[var(--fg)]">
-              Hints
-              <input
-                type="checkbox"
-                checked={settings.showHints}
-                onChange={(e) => settings.setShowHints(e.target.checked)}
-              />
-            </label>
-            <label className="mt-3 flex items-center justify-between text-sm text-[var(--fg)]">
-              Vibration
-              <input
-                type="checkbox"
-                checked={settings.vibration}
-                onChange={(e) => settings.setVibration(e.target.checked)}
-              />
-            </label>
-            <Button className="mt-5" variant="secondary" onClick={() => setShowSettings(false)}>
-              Close
-            </Button>
-          </div>
+            Change mode
+          </Button>
+          <Button variant="secondary" className="w-full" to="/port">
+            Return to Port
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              const next = getRandomGame((g) => g.id !== game.id);
+              navigate(next.route);
+            }}
+          >
+            Try another game
+          </Button>
         </div>
-      )}
+      </BottomSheet>
+
+      {/* Tutorial */}
+      <BottomSheet
+        open={showTutorial && started}
+        onClose={() => {
+          markTutorial(game.id);
+          setShowTutorial(false);
+        }}
+        title={`How to play ${game.name}`}
+      >
+        <ul className="list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
+          {game.tutorial.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+        <Button
+          className="mt-5 w-full"
+          onClick={() => {
+            markTutorial(game.id);
+            setShowTutorial(false);
+          }}
+        >
+          Got it
+        </Button>
+      </BottomSheet>
+
+      <BottomSheet open={showRules} onClose={() => setShowRules(false)} title={`${game.name} rules`}>
+        <ul className="list-disc space-y-2 pl-5 text-sm text-[var(--fg-muted)]">
+          {game.rules.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      </BottomSheet>
+
+      <BottomSheet open={showMore} onClose={() => setShowMore(false)} title="Options">
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setShowMore(false);
+              restart();
+            }}
+          >
+            Restart
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setShowMore(false);
+              setShowRules(true);
+            }}
+          >
+            Rules
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setShowMore(false);
+              setShowSettings(true);
+            }}
+          >
+            Settings
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => void toggleFullscreen()}
+          >
+            Fullscreen
+          </Button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={showSettings} onClose={() => setShowSettings(false)} title="Game settings">
+        <label className="flex items-center justify-between py-3 text-sm text-[var(--fg)] border-b border-[var(--border)]">
+          Hints
+          <input
+            type="checkbox"
+            checked={settings.showHints}
+            onChange={(e) => settings.setShowHints(e.target.checked)}
+            className="h-5 w-5 accent-[var(--accent)]"
+          />
+        </label>
+        <label className="flex items-center justify-between py-3 text-sm text-[var(--fg)]">
+          Vibration
+          <input
+            type="checkbox"
+            checked={settings.vibration}
+            onChange={(e) => settings.setVibration(e.target.checked)}
+            className="h-5 w-5 accent-[var(--accent)]"
+          />
+        </label>
+      </BottomSheet>
     </div>
   );
 }

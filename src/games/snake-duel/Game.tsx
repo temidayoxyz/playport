@@ -108,31 +108,73 @@ export default function SnakeDuelGame({
 
     const draw = () => {
       const cell = canvas.width / 20;
-      ctx.fillStyle = "#0b1220";
+      const isDark = document.documentElement.classList.contains("dark");
+      ctx.fillStyle = isDark ? "#171814" : "#22241e";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // subtle grid
+      ctx.strokeStyle = isDark ? "rgba(255,255,255,0.04)" : "rgba(245,244,238,0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 20; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cell, 0);
+        ctx.lineTo(i * cell, canvas.height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * cell);
+        ctx.lineTo(canvas.width, i * cell);
+        ctx.stroke();
+      }
       const p = playerRef.current;
       for (const o of p.obstacles) {
-        ctx.fillStyle = "#243049";
-        ctx.fillRect(o.x * cell, o.y * cell, cell - 1, cell - 1);
+        ctx.fillStyle = isDark ? "#3a3c34" : "#4a4c42";
+        ctx.beginPath();
+        ctx.roundRect(o.x * cell + 1, o.y * cell + 1, cell - 2, cell - 2, 3);
+        ctx.fill();
       }
-      ctx.fillStyle = "#84cc16";
-      ctx.fillRect(p.food.x * cell, p.food.y * cell, cell - 1, cell - 1);
+      // food
+      ctx.fillStyle = "#CAF15A";
+      ctx.beginPath();
+      ctx.roundRect(p.food.x * cell + 2, p.food.y * cell + 2, cell - 4, cell - 4, 4);
+      ctx.fill();
+      // player snake — coral head + body outline distinction
       p.snake.forEach((c, i) => {
-        ctx.fillStyle = i === 0 ? "#22d3ee" : "#0891b2";
-        ctx.fillRect(c.x * cell, c.y * cell, cell - 1, cell - 1);
+        ctx.fillStyle = i === 0 ? "#EF6C58" : "#c45646";
+        ctx.beginPath();
+        ctx.roundRect(c.x * cell + 1, c.y * cell + 1, cell - 2, cell - 2, 3);
+        ctx.fill();
+        if (i === 0) {
+          ctx.strokeStyle = "#f5f4ee";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
       });
       if (cpuRef.current) {
-        ctx.fillStyle = "#f97316";
-        ctx.fillRect(cpuRef.current.food.x * cell, cpuRef.current.food.y * cell, cell - 1, cell - 1);
+        ctx.fillStyle = "#D8B54A";
+        ctx.beginPath();
+        ctx.roundRect(
+          cpuRef.current.food.x * cell + 2,
+          cpuRef.current.food.y * cell + 2,
+          cell - 4,
+          cell - 4,
+          4,
+        );
+        ctx.fill();
         cpuRef.current.snake.forEach((c, i) => {
-          ctx.fillStyle = i === 0 ? "#fb7185" : "#e11d48";
-          ctx.fillRect(c.x * cell, c.y * cell, cell - 1, cell - 1);
+          ctx.fillStyle = i === 0 ? "#F5F4EE" : "#b5b7ae";
+          ctx.beginPath();
+          ctx.roundRect(c.x * cell + 1, c.y * cell + 1, cell - 2, cell - 2, 3);
+          ctx.fill();
+          if (i === 0) {
+            ctx.strokeStyle = "#171814";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
         });
       }
-      ctx.fillStyle = "#a3b0c6";
-      ctx.font = "14px Outfit, sans-serif";
+      ctx.fillStyle = "rgba(245,244,238,0.7)";
+      ctx.font = "600 13px Inter, system-ui, sans-serif";
       ctx.fillText(`Score ${p.score}`, 8, 18);
-      if (cpuRef.current) ctx.fillText(`CPU ${cpuRef.current.score}`, 8, 36);
+      if (cpuRef.current) ctx.fillText(`Opp ${cpuRef.current.score}`, 8, 36);
     };
 
     const loop = (now: number) => {

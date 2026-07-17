@@ -2,7 +2,7 @@ import type { GameDifficultyDefinition, GameModeDefinition } from "@/types/game"
 
 export const MODES: GameModeDefinition[] = [
   { id: "solo", name: "Score Attack", description: "Clear cups for points.", default: true },
-  { id: "vs-computer", name: "vs Computer", description: "Alternate shots with AI." },
+  { id: "vs-computer", name: "vs Computer", description: "Alternate shots with the computer." },
   { id: "trick", name: "Trick Shot", description: "Harder angles, fewer balls." },
   { id: "limited", name: "Limited Balls", description: "Only 6 balls — make them count." },
   { id: "local", name: "Local Turns", description: "Two players, one device." },

@@ -23,9 +23,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("three") || id.includes("@react-three")) {
-              return "vendor-three";
-            }
             if (
               id.includes("react-dom") ||
               id.includes("react-router") ||
@@ -33,6 +30,9 @@ export default defineConfig({
               id.includes("\\react\\")
             ) {
               return "vendor-react";
+            }
+            if (id.includes("chess.js") || id.includes("lucide")) {
+              return "vendor-games";
             }
           }
         },

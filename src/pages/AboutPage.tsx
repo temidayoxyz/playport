@@ -7,17 +7,13 @@ export function AboutPage() {
       <h1 className="pp-display-md mt-2">About PlayPort</h1>
       <div className="mt-6 space-y-4 text-[var(--fg-muted)] leading-relaxed">
         <p>
-          PlayPort is a mobile-first browser game arcade. Visit the Port, pick a dock, and launch a
-          game instantly — no accounts, no downloads, no servers.
+          PlayPort is a collection of lightweight games in one clean browser app. Enter the Port,
+          choose a game, and start playing — no accounts, no downloads.
         </p>
         <p>
-          The platform is built as a static site for GitHub Pages using Vite, React, TypeScript, and
-          Tailwind. Action games use Canvas; Cup Pong and Archery use optimised Three.js; Chess uses
-          chess.js with a Stockfish-compatible Web Worker.
+          Preferences and local best scores stay on this device only. Nothing is uploaded.
         </p>
-        <p>
-          Preferences and high scores stay on your device via localStorage. Nothing is uploaded.
-        </p>
+        <p>More games will open at the Port over time.</p>
       </div>
       <Button to="/port" className="mt-10">
         Enter the Port

@@ -1,53 +1,8 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import type { Mesh } from "three";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameShellProps, GameSession } from "@/types/game";
 import { audioManager } from "@/lib/audio/audioManager";
 import { announce } from "@/lib/accessibility/announce";
-import { Icon, Icons } from "@/components/common/Icon";
-import { resolveQuality, supportsWebGL } from "@/lib/performance/quality";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { computerShot, flightPoints, projectImpact, type Impact } from "./engine/projectile";
-
-function Target({ xOffset, scale }: { xOffset: number; scale: number }) {
-  return (
-    <group position={[xOffset, 1.1, -6]} scale={scale}>
-      {[0.9, 0.7, 0.5, 0.3, 0.12].map((r, i) => (
-        <mesh key={r} position={[0, 0, i * 0.01]}>
-          <circleGeometry args={[r, 32]} />
-          <meshStandardMaterial color={i % 2 === 0 ? "#f8fafc" : "#ef4444"} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0, 0.06]}>
-        <circleGeometry args={[0.08, 16]} />
-        <meshStandardMaterial color="#fbbf24" />
-      </mesh>
-    </group>
-  );
-}
-
-function ArrowMesh({ points, active }: { points: [number, number, number][]; active: boolean }) {
-  const ref = useRef<Mesh>(null);
-  const t = useRef(0);
-  useFrame((_, dt) => {
-    if (!active || !ref.current || points.length === 0) return;
-    t.current = Math.min(1, t.current + dt * 2.2);
-    const idx = Math.min(points.length - 1, Math.floor(t.current * (points.length - 1)));
-    const p = points[idx]!;
-    ref.current.position.set(p[0], p[1], p[2]);
-    if (t.current >= 1) t.current = 0;
-  });
-  useEffect(() => {
-    t.current = 0;
-  }, [points]);
-  if (!active) return null;
-  return (
-    <mesh ref={ref}>
-      <cylinderGeometry args={[0.02, 0.02, 0.5, 6]} />
-      <meshStandardMaterial color="#e2e8f0" />
-    </mesh>
-  );
-}
+import { computerShot, projectImpact, type Impact } from "./engine/projectile";
 
 export default function ArcheryGame({
   modeId,
@@ -56,209 +11,362 @@ export default function ArcheryGame({
   sound = true,
   reducedMotion = false,
 }: GameShellProps) {
-  const qualityPref = useSettingsStore((s) => s.performanceQuality);
-  const quality = useMemo(() => resolveQuality(qualityPref, reducedMotion), [qualityPref, reducedMotion]);
-  const webgl = supportsWebGL();
-
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [wind, setWind] = useState(() => (Math.random() * 2 - 1) * (difficultyId === "hard" ? 1 : 0.55));
   const [score, setScore] = useState(0);
   const [oppScore, setOppScore] = useState(0);
   const [arrows, setArrows] = useState(modeId === "practice" ? 99 : 10);
   const [status, setStatus] = useState<GameSession["status"]>("playing");
   const [impact, setImpact] = useState<Impact | null>(null);
-  const [flight, setFlight] = useState<[number, number, number][]>([]);
   const [flying, setFlying] = useState(false);
+  const [flightT, setFlightT] = useState(0);
   const [targetX, setTargetX] = useState(0);
   const [timeLeft, setTimeLeft] = useState(modeId === "timed" ? 45 : null);
   const [elapsed, setElapsed] = useState(0);
-  const drag = useRef<{ x: number; y: number } | null>(null);
   const [aim, setAim] = useState({ x: 0, y: 0, power: 0 });
+  const [pulling, setPulling] = useState(false);
+  const drag = useRef<{ x: number; y: number } | null>(null);
   const started = useRef(Date.now());
   const scale = difficultyId === "hard" ? 0.75 : difficultyId === "easy" ? 1.15 : 1;
+  const impactRef = useRef<Impact | null>(null);
 
   const emit = useCallback(
     (partial: Partial<GameSession> = {}) => {
       onSessionChange?.({
         status,
         score,
-        opponentScore: oppScore,
+        opponentScore: modeId === "vs-computer" ? oppScore : undefined,
         elapsedSeconds: elapsed,
         stats: {
-          Arrows: arrows,
-          Wind: wind.toFixed(2),
+          Arrows: modeId === "practice" ? "∞" : arrows,
+          Wind: wind > 0.15 ? "→ right" : wind < -0.15 ? "← left" : "calm",
           Last: impact ? `${impact.points} pts` : "—",
+          ...(timeLeft !== null ? { Time: `${timeLeft}s` } : {}),
         },
         ...partial,
       });
     },
-    [arrows, elapsed, impact, onSessionChange, oppScore, score, status, wind],
+    [arrows, elapsed, impact, modeId, onSessionChange, oppScore, score, status, timeLeft, wind],
   );
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setElapsed(Math.floor((Date.now() - started.current) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     emit();
   }, [emit]);
 
   useEffect(() => {
-    if (modeId !== "moving" || status !== "playing") return;
-    let t = 0;
     const id = window.setInterval(() => {
-      t += 0.05;
-      setTargetX(Math.sin(t) * (difficultyId === "hard" ? 1.2 : 0.7));
-    }, 50);
-    return () => clearInterval(id);
-  }, [difficultyId, modeId, status]);
+      if (status !== "playing") return;
+      setElapsed(Math.floor((Date.now() - started.current) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [status]);
 
   useEffect(() => {
-    if (timeLeft === null || status !== "playing") return;
+    if (modeId !== "timed" || status !== "playing") return;
     const id = window.setInterval(() => {
       setTimeLeft((t) => {
         if (t === null) return t;
         if (t <= 1) {
-          setStatus("won");
-          if (sound) audioManager.play("win");
-          emit({ status: "won", score });
+          setStatus(score >= 20 ? "won" : "lost");
           return 0;
         }
         return t - 1;
       });
     }, 1000);
-    return () => clearInterval(id);
-  }, [emit, score, sound, status, timeLeft]);
+    return () => window.clearInterval(id);
+  }, [modeId, score, status]);
 
-  const fire = (aimX: number, aimY: number, power: number, forComputer = false) => {
-    if (status !== "playing" || flying || arrows <= 0) return;
-    const result = projectImpact({
-      aimX: aimX - targetX * 0.15,
-      aimY,
-      power,
-      wind,
-      distance: difficultyId === "hard" ? 1.3 : 1,
-    });
-    const pts = flightPoints([0, 1, 2], [result.x * 2 + targetX, 1.1 + result.y, -6]);
-    setFlight(pts);
-    setFlying(true);
-    setImpact(result);
-    if (sound) audioManager.play(result.points > 0 ? "correct" : "incorrect");
-    if (result.ring === 5) announce("Bullseye");
+  // Moving target
+  useEffect(() => {
+    if (difficultyId === "easy" || status !== "playing") return;
+    let raf = 0;
+    let t0 = performance.now();
+    const loop = (now: number) => {
+      const t = (now - t0) / 1000;
+      setTargetX(Math.sin(t * (difficultyId === "hard" ? 1.4 : 0.9)) * 0.35);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [difficultyId, status]);
 
-    window.setTimeout(() => {
-      setFlying(false);
-      if (forComputer) {
-        setOppScore((s) => s + result.points);
+  // Flight animation
+  useEffect(() => {
+    if (!flying) return;
+    let raf = 0;
+    let start = performance.now();
+    const loop = (now: number) => {
+      const t = Math.min(1, (now - start) / (reducedMotion ? 200 : 550));
+      setFlightT(t);
+      if (t < 1) {
+        raf = requestAnimationFrame(loop);
       } else {
-        setScore((s) => s + result.points);
-      }
-      setArrows((a) => {
-        const left = a - 1;
-        if (modeId !== "practice" && left <= 0) {
-          if (modeId === "vs-computer") {
-            const finalScore = forComputer ? score : score + result.points;
-            const finalOpp = forComputer ? oppScore + result.points : oppScore;
-            // after player finishes, computer plays remaining in batch — simplified end
-            const st = finalScore >= finalOpp ? "won" : "lost";
-            setStatus(st);
-            if (sound) audioManager.play(st === "won" ? "win" : "lose");
-            emit({ status: st, score: finalScore, opponentScore: finalOpp });
-          } else {
-            setStatus("won");
-            if (sound) audioManager.play("win");
-            emit({ status: "won", score: score + result.points });
-          }
+        setFlying(false);
+        const imp = impactRef.current;
+        if (imp) {
+          setScore((s) => s + imp.points);
+          if (sound) audioManager.play(imp.points > 0 ? "correct" : "incorrect");
+          announce(imp.points > 0 ? `${imp.points} points` : "Miss");
         }
-        return left;
-      });
-      setWind((Math.random() * 2 - 1) * (difficultyId === "hard" ? 1 : 0.55));
-    }, reducedMotion ? 200 : 700);
+        setWind((Math.random() * 2 - 1) * (difficultyId === "hard" ? 1 : 0.55));
+        setArrows((a) => {
+          const next = modeId === "practice" ? a : a - 1;
+          if (modeId !== "practice" && next <= 0) {
+            window.setTimeout(() => {
+              if (modeId === "vs-computer") {
+                // computer volley
+                let cScore = 0;
+                for (let i = 0; i < 10; i++) {
+                  const shot = computerShot(difficultyId, (Math.random() * 2 - 1) * 0.5);
+                  cScore += projectImpact({ ...shot, distance: 1 }).points;
+                }
+                setOppScore(cScore);
+                setStatus(score + (imp?.points ?? 0) >= cScore ? "won" : "lost");
+              } else {
+                setStatus((score + (imp?.points ?? 0)) >= 30 ? "won" : "lost");
+              }
+            }, 400);
+          }
+          return next;
+        });
+        setAim({ x: 0, y: 0, power: 0 });
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [difficultyId, flying, modeId, reducedMotion, score, sound]);
+
+  // Draw
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const isDark = document.documentElement.classList.contains("dark");
+    const skyTop = isDark ? "#1a1c16" : "#e8f0e4";
+    const skyBot = isDark ? "#11120f" : "#f3f2ec";
+    const ground = isDark ? "#22241e" : "#d8d4c4";
+    const accent = "#F59A51";
+    const ink = isDark ? "#f5f4ee" : "#171814";
+
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, skyTop);
+    grad.addColorStop(0.65, skyBot);
+    grad.addColorStop(0.65, ground);
+    grad.addColorStop(1, isDark ? "#1a1c16" : "#cfcab8");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Horizon line
+    ctx.strokeStyle = isDark ? "rgba(255,255,255,0.06)" : "rgba(23,24,20,0.08)";
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.65);
+    ctx.lineTo(w, h * 0.65);
+    ctx.stroke();
+
+    // Wind lines
+    const windY = 28;
+    ctx.strokeStyle = isDark ? "rgba(245,244,238,0.25)" : "rgba(23,24,20,0.2)";
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      const y = windY + i * 8;
+      const len = 28 + Math.abs(wind) * 20;
+      const dir = wind >= 0 ? 1 : -1;
+      const x0 = w * 0.5 - dir * len * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.lineTo(x0 + dir * len, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x0 + dir * len, y);
+      ctx.lineTo(x0 + dir * len - dir * 6, y - 4);
+      ctx.moveTo(x0 + dir * len, y);
+      ctx.lineTo(x0 + dir * len - dir * 6, y + 4);
+      ctx.stroke();
+    }
+
+    // Target
+    const tx = w * 0.5 + targetX * w * 0.28;
+    const ty = h * 0.38;
+    const baseR = Math.min(w, h) * 0.16 * scale;
+    const rings = [
+      { r: 1, c: isDark ? "#f5f4ee" : "#f8f7f2" },
+      { r: 0.8, c: accent },
+      { r: 0.6, c: isDark ? "#f5f4ee" : "#f8f7f2" },
+      { r: 0.4, c: accent },
+      { r: 0.22, c: "#D8B54A" },
+      { r: 0.1, c: "#c8f04d" },
+    ];
+    // stand
+    ctx.fillStyle = isDark ? "#3a3c34" : "#8a7a5a";
+    ctx.fillRect(tx - 3, ty + baseR * 0.9, 6, h * 0.65 - ty - baseR * 0.5);
+    ctx.beginPath();
+    ctx.ellipse(tx, h * 0.65, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.fill();
+
+    for (const ring of rings) {
+      ctx.beginPath();
+      ctx.arc(tx, ty, baseR * ring.r, 0, Math.PI * 2);
+      ctx.fillStyle = ring.c;
+      ctx.fill();
+      ctx.strokeStyle = isDark ? "rgba(0,0,0,0.15)" : "rgba(23,24,20,0.1)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Impact mark
+    if (impact && !flying) {
+      const ix = tx + impact.x * baseR * 1.6;
+      const iy = ty + impact.y * baseR * 1.6;
+      ctx.beginPath();
+      ctx.arc(ix, iy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = ink;
+      ctx.fill();
+    }
+
+    // Arrow in flight
+    if (flying && impact) {
+      const fromX = w * 0.5;
+      const fromY = h * 0.82;
+      const toX = tx + impact.x * baseR * 1.6;
+      const toY = ty + impact.y * baseR * 1.6;
+      const ease = 1 - Math.pow(1 - flightT, 2);
+      const ax = fromX + (toX - fromX) * ease;
+      const ay = fromY + (toY - fromY) * ease - Math.sin(Math.PI * ease) * 40;
+      ctx.save();
+      ctx.translate(ax, ay);
+      const angle = Math.atan2(toY - fromY, toX - fromX) - Math.sin(Math.PI * ease) * 0.3;
+      ctx.rotate(angle);
+      ctx.fillStyle = ink;
+      ctx.fillRect(-14, -1.5, 28, 3);
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(8, -4);
+      ctx.lineTo(8, 4);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Bow at bottom
+    const bowX = w * 0.5;
+    const bowY = h * 0.86;
+    const pull = pulling ? aim.power : 0;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(bowX, bowY, 28, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+    // string
+    ctx.strokeStyle = ink;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bowX - 24, bowY - 8);
+    ctx.lineTo(bowX - aim.x * 20, bowY + 10 + pull * 24);
+    ctx.lineTo(bowX + 24, bowY - 8);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Power bar
+    if (pulling || aim.power > 0) {
+      ctx.fillStyle = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
+      ctx.fillRect(w * 0.25, h - 18, w * 0.5, 6);
+      ctx.fillStyle = accent;
+      ctx.fillRect(w * 0.25, h - 18, w * 0.5 * aim.power, 6);
+    }
+
+    if (!pulling && !flying && status === "playing") {
+      ctx.fillStyle = isDark ? "rgba(245,244,238,0.4)" : "rgba(23,24,20,0.35)";
+      ctx.font = "500 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Drag down to draw · release to shoot", w / 2, h - 28);
+    }
+  }, [aim, flying, flightT, impact, pulling, scale, status, targetX, wind]);
+
+  const pointerPos = (e: React.PointerEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  if (!webgl) {
-    return (
-      <div className="rounded-2xl surface p-6 text-center">
-        <p className="font-display text-lg">WebGL is required for Archery</p>
-        <p className="mt-2 text-sm text-muted">Your device does not appear to support WebGL.</p>
-      </div>
-    );
-  }
+  const canShoot = status === "playing" && !flying && arrows > 0;
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!canShoot) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = pointerPos(e);
+    setPulling(true);
+    setImpact(null);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current || !pulling) return;
+    const p = pointerPos(e);
+    const dx = (p.x - drag.current.x) / 80;
+    const dy = (p.y - drag.current.y) / 100;
+    const power = Math.min(1, Math.max(0, dy));
+    setAim({
+      x: Math.max(-1, Math.min(1, dx)),
+      y: Math.max(-1, Math.min(1, -dy * 0.5)),
+      power,
+    });
+  };
+
+  const onPointerUp = () => {
+    if (!pulling) return;
+    setPulling(false);
+    drag.current = null;
+    if (aim.power < 0.12) {
+      setAim({ x: 0, y: 0, power: 0 });
+      return;
+    }
+    const imp = projectImpact({
+      aimX: aim.x + targetX * 0.3,
+      aimY: aim.y,
+      power: aim.power,
+      wind,
+      distance: 1,
+    });
+    impactRef.current = imp;
+    setImpact(imp);
+    setFlying(true);
+    setFlightT(0);
+    if (sound) audioManager.play("whoosh");
+  };
 
   return (
-    <div className="flex w-full max-w-lg flex-col gap-3">
-      <div className="flex flex-wrap justify-between gap-2 text-sm">
-        <span className="rounded-full surface px-3 py-1.5">Score {score}</span>
-        {modeId === "vs-computer" && (
-          <span className="rounded-full surface px-3 py-1.5">CPU {oppScore}</span>
-        )}
-        <span className="rounded-full surface px-3 py-1.5">Arrows {arrows}</span>
-        <span className="inline-flex items-center gap-1.5 rounded-full surface px-3 py-1.5">
-          <Icon icon={Icons.Wind} size="sm" />
-          Wind
-          <Icon icon={wind > 0 ? Icons.ArrowRight : Icons.ArrowLeft} size="sm" />
-          {Math.abs(wind).toFixed(2)}
+    <div className="flex w-full max-w-lg flex-col items-center gap-2">
+      <div className="flex w-full items-center justify-between text-xs font-medium text-[var(--fg-muted)] px-1">
+        <span>
+          Wind{" "}
+          <strong className="text-[var(--fg)]">
+            {wind > 0.15 ? "→" : wind < -0.15 ? "←" : "·"}
+          </strong>
         </span>
-        {timeLeft !== null && <span className="rounded-full surface px-3 py-1.5">{timeLeft}s</span>}
+        <span style={{ color: "#F59A51" }}>
+          {modeId === "practice" ? "Practice" : `${arrows} arrows`}
+        </span>
       </div>
-
-      <div
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl surface game-gesture"
-        onPointerDown={(e) => {
-          drag.current = { x: e.clientX, y: e.clientY };
-          setAim({ x: 0, y: 0, power: 0 });
-        }}
-        onPointerMove={(e) => {
-          if (!drag.current) return;
-          const dx = (e.clientX - drag.current.x) / 140;
-          const dy = (e.clientY - drag.current.y) / 140;
-          setAim({
-            x: Math.max(-1, Math.min(1, dx)),
-            y: Math.max(-1, Math.min(1, -dy * 0.5)),
-            power: Math.min(1, Math.max(0, dy)),
-          });
-        }}
-        onPointerUp={() => {
-          if (!drag.current) return;
-          drag.current = null;
-          fire(aim.x, aim.y, Math.max(0.35, aim.power));
-          if (modeId === "vs-computer" && arrows > 1) {
-            window.setTimeout(() => {
-              const cpu = computerShot(difficultyId, wind);
-              fire(cpu.aimX, cpu.aimY, cpu.power, true);
-            }, 800);
-          }
-        }}
-      >
-        <Canvas
-          dpr={quality.dpr}
-          camera={{ position: [0, 1.4, 4], fov: 50 }}
-          gl={{ antialias: quality.antialias, powerPreference: "high-performance" }}
-          onCreated={({ gl }) => gl.setClearColor("#87a7c7")}
-        >
-          <Suspense fallback={null}>
-            <ambientLight intensity={0.7} />
-            <directionalLight position={[2, 4, 3]} intensity={0.85} />
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -2]}>
-              <planeGeometry args={[20, 20]} />
-              <meshStandardMaterial color="#4d7c4d" />
-            </mesh>
-            <Target xOffset={targetX} scale={scale} />
-            <ArrowMesh points={flight} active={flying} />
-            {/* bow rest marker */}
-            <mesh position={[0, 1, 2]}>
-              <boxGeometry args={[0.08, 0.5, 0.08]} />
-              <meshStandardMaterial color="#7c4a1e" />
-            </mesh>
-          </Suspense>
-        </Canvas>
-        <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-xs text-port-900">
-          {drag.current || aim.power > 0 ? `Power ${Math.round(aim.power * 100)}%` : "Drag to aim · pull for power"}
-          {impact && !flying ? ` · Last: ${impact.points} pts` : ""}
-        </div>
-      </div>
+      <canvas
+        ref={canvasRef}
+        className="game-gesture w-full touch-none rounded-[var(--radius-xl)] border border-[var(--border)]"
+        style={{ height: "min(58vh, 420px)", maxHeight: 420 }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        role="img"
+        aria-label="Archery range. Drag to draw the bow and release to shoot."
+      />
     </div>
   );
 }

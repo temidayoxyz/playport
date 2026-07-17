@@ -21,7 +21,7 @@ export type GameDifficulty =
 
 export type InputMethod = "touch" | "mouse" | "keyboard";
 
-export type GameTechnology = "react" | "canvas" | "phaser" | "threejs" | "worker";
+export type GameTechnology = "react" | "canvas" | "worker";
 
 export interface GameModeDefinition {
   id: string;

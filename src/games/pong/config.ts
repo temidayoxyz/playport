@@ -10,9 +10,9 @@ export const MODES: GameModeDefinition[] = [
 ];
 
 export const DIFFICULTIES: GameDifficultyDefinition[] = [
-  { id: "easy", name: "Easy", description: "Slower AI reactions." },
+  { id: "easy", name: "Easy", description: "Slower computer reactions." },
   { id: "medium", name: "Medium", description: "Balanced rally.", recommended: true },
-  { id: "hard", name: "Hard", description: "Sharp AI prediction." },
+  { id: "hard", name: "Hard", description: "Sharp computer prediction." },
 ];
 
 export const RULES = [

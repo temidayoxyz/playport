@@ -33,7 +33,7 @@ export default function ChessGame({
   const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
   const [status, setStatus] = useState<GameSession["status"]>("playing");
   const [thinking, setThinking] = useState(false);
-  const [engineNote, setEngineNote] = useState("Loading chess engine…");
+  const [ready, setReady] = useState(false);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
@@ -47,7 +47,11 @@ export default function ChessGame({
       onSessionChange?.({
         status,
         elapsedSeconds: elapsed,
-        message: thinking ? "Computer thinking…" : engineNote,
+        message: thinking
+          ? "Computer is thinking"
+          : !ready && vsComputer
+            ? "Preparing opponent…"
+            : undefined,
         stats: {
           Moves: history.length,
           Turn: game.turn() === "w" ? "White" : "Black",
@@ -56,14 +60,14 @@ export default function ChessGame({
         ...partial,
       });
     },
-    [elapsed, engineNote, game, history.length, onSessionChange, status, thinking],
+    [elapsed, game, history.length, onSessionChange, ready, status, thinking, vsComputer],
   );
 
   useEffect(() => {
     const engine = new StockfishEngine();
     engineRef.current = engine;
     void engine.init().then(() => {
-      setEngineNote(engine.getStatus() === "ready" ? "Engine ready" : "Engine ready (fallback)");
+      setReady(true);
     });
     return () => {
       engine.destroy();
@@ -236,9 +240,12 @@ export default function ChessGame({
     <div className="flex w-full max-w-lg flex-col items-center gap-3">
       <div className="flex w-full flex-wrap items-center justify-between gap-2 text-sm">
         <span className="rounded-full surface px-3 py-1.5">
-          {thinking ? "Thinking…" : game.isCheck() ? "Check!" : `${game.turn() === "w" ? "White" : "Black"} to move`}
+          {thinking
+            ? "Computer is thinking"
+            : game.isCheck()
+              ? "Check!"
+              : `${game.turn() === "w" ? "White" : "Black"} to move`}
         </span>
-        <span className="text-muted text-xs">{engineNote}</span>
       </div>
 
       {vsComputer && (
@@ -247,7 +254,7 @@ export default function ChessGame({
             <button
               key={c}
               type="button"
-              className={`touch-target rounded-xl px-3 py-2 text-sm ${playerColor === c ? "bg-[var(--accent)] text-white" : "surface"}`}
+              className={`touch-target rounded-xl px-3 py-2 text-sm ${playerColor === c ? "bg-[var(--accent)] text-[var(--on-accent)]" : "surface"}`}
               onClick={() => {
                 setPlayerColor(c);
                 setOrientation(c);
@@ -270,7 +277,7 @@ export default function ChessGame({
       </div>
 
       <div
-        className="grid aspect-square w-full max-w-md grid-cols-8 overflow-hidden rounded-2xl shadow-[var(--shadow-card)] game-gesture"
+        className="grid aspect-square w-full max-w-md grid-cols-8 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-strong)] shadow-[var(--shadow-sm)] game-gesture"
         role="grid"
         aria-label="Chess board"
       >
@@ -282,6 +289,8 @@ export default function ChessGame({
           const isSel = selected === sq;
           const isLegal = legal.includes(sq);
           const isLast = lastMove && (lastMove[0] === sq || lastMove[1] === sq);
+          const inCheck =
+            game.isCheck() && piece?.type === "k" && piece.color === game.turn();
           return (
             <button
               key={sq}
@@ -290,15 +299,17 @@ export default function ChessGame({
               aria-label={pieceLabel(piece ?? null, sq)}
               onClick={() => onSquare(sq)}
               className={`relative flex items-center justify-center text-[clamp(1.25rem,5vw,2rem)] ${
-                dark ? "bg-[#769656]" : "bg-[#eeeed2]"
-              } ${isSel ? "ring-2 ring-inset ring-yellow-300" : ""} ${isLast ? "bg-yellow-300/40" : ""}`}
+                dark ? "bg-[#8da85a]" : "bg-[#e8e6d8]"
+              } ${isSel ? "ring-2 ring-inset ring-[var(--fg)]" : ""} ${
+                isLast && !isSel ? "bg-[color-mix(in_srgb,#c8f04d_35%,transparent)]" : ""
+              } ${inCheck ? "bg-[color-mix(in_srgb,var(--error)_40%,transparent)]" : ""}`}
             >
               {piece && (
                 <span
                   className={`font-display font-bold leading-none ${
                     piece.color === "w"
-                      ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
-                      : "text-[#0a0a0a]"
+                      ? "text-[#f5f4ee] drop-shadow-[0_1px_1px_rgba(23,24,20,0.55)]"
+                      : "text-[#171814]"
                   }`}
                 >
                   {PIECE_MARK[piece.type]}
@@ -306,7 +317,7 @@ export default function ChessGame({
               )}
               {isLegal && (
                 <span
-                  className={`absolute rounded-full ${piece ? "inset-1 border-2 border-black/30" : "h-3 w-3 bg-black/25"}`}
+                  className={`absolute rounded-full ${piece ? "inset-1 border-2 border-[var(--fg)]/30" : "h-3 w-3 bg-[var(--fg)]/25"}`}
                   aria-hidden
                 />
               )}

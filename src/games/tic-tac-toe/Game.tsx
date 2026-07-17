@@ -211,7 +211,7 @@ export default function TicTacToeGame({
               key={m}
               type="button"
               className={`touch-target rounded-xl px-4 py-2 text-sm font-semibold ${
-                playerMark === m ? "bg-[var(--accent)] text-white" : "surface"
+                playerMark === m ? "bg-[var(--accent)] text-[var(--on-accent)]" : "surface"
               }`}
               onClick={() => {
                 setPlayerMark(m);
@@ -240,11 +240,19 @@ export default function TicTacToeGame({
               aria-label={cellLabel(cell, i)}
               disabled={!!cell || status !== "playing" || !humanCanPlay}
               onClick={() => onCell(i)}
-              className={`touch-target flex items-center justify-center rounded-2xl text-4xl font-display font-bold transition surface ${
-                won ? "ring-2 ring-[var(--accent)] bg-[var(--bg-muted)]" : ""
-              } ${hint === i ? "outline outline-2 outline-dashed outline-[var(--accent)]" : ""}`}
+              className={`touch-target flex items-center justify-center rounded-[14px] text-4xl font-display font-bold transition border border-[var(--border)] bg-[var(--surface-solid)] ${
+                won ? "ring-2 ring-[var(--color-cat-board)] bg-[color-mix(in_srgb,var(--color-cat-board)_18%,var(--surface-solid))]" : ""
+              } ${hint === i ? "outline outline-2 outline-dashed outline-[var(--color-cat-board)]" : ""}`}
             >
-              <span className={cell === "X" ? "text-violet-500" : cell === "O" ? "text-cyan-500" : ""}>
+              <span
+                className={
+                  cell === "X"
+                    ? "text-[var(--color-cat-board)]"
+                    : cell === "O"
+                      ? "text-[var(--fg)]"
+                      : ""
+                }
+              >
                 {cell}
               </span>
             </button>

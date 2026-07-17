@@ -109,26 +109,32 @@ export default function PongGame({
         stateRef.current = s;
       }
 
-      // draw
-      ctx.fillStyle = "#0b1220";
+      // draw — coral accent, warm neutrals (no blue/cyan palette)
+      const isDark = document.documentElement.classList.contains("dark");
+      ctx.fillStyle = isDark ? "#171814" : "#22241e";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "#3a4a66";
+      ctx.strokeStyle = isDark ? "rgba(255,255,255,0.12)" : "rgba(245,244,238,0.18)";
       ctx.setLineDash([8, 10]);
       ctx.beginPath();
       ctx.moveTo(canvas.width / 2, 0);
       ctx.lineTo(canvas.width / 2, canvas.height);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = "#22d3ee";
+      // ball trail
+      ctx.fillStyle = "rgba(239,108,88,0.25)";
+      ctx.beginPath();
+      ctx.arc(s.ballX - s.ballVX * 0.02, s.ballY - s.ballVY * 0.02, s.ballR * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#EF6C58";
       ctx.fillRect(24, s.leftY - s.paddleH / 2, s.paddleW, s.paddleH);
-      ctx.fillStyle = "#f97316";
+      ctx.fillStyle = "#F5F4EE";
       ctx.fillRect(canvas.width - 24 - s.paddleW, s.rightY - s.paddleH / 2, s.paddleW, s.paddleH);
       ctx.beginPath();
-      ctx.fillStyle = "#f8fafc";
+      ctx.fillStyle = "#F5F4EE";
       ctx.arc(s.ballX, s.ballY, s.ballR, 0, Math.PI * 2);
       ctx.fill();
-      ctx.font = "24px Space Grotesk, sans-serif";
-      ctx.fillStyle = "#a3b0c6";
+      ctx.font = "600 24px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(245,244,238,0.55)";
       ctx.fillText(String(s.leftScore), canvas.width / 2 - 40, 36);
       ctx.fillText(String(s.rightScore), canvas.width / 2 + 24, 36);
 

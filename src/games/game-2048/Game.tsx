@@ -14,19 +14,20 @@ import {
 } from "./engine/logic";
 import { sizeForMode } from "./config";
 
+/** PlayPort warm gold hierarchy — not the classic blue/purple palette. */
 const COLORS: Record<number, string> = {
-  0: "bg-[var(--bg-muted)]",
-  2: "bg-[#dbeafe] text-port-900",
-  4: "bg-[#bfdbfe] text-port-900",
-  8: "bg-[#93c5fd] text-port-900",
-  16: "bg-[#60a5fa] text-white",
-  32: "bg-[#3b82f6] text-white",
-  64: "bg-[#2563eb] text-white",
-  128: "bg-[#a78bfa] text-white",
-  256: "bg-[#8b5cf6] text-white",
-  512: "bg-[#ec4899] text-white",
-  1024: "bg-[#f97316] text-white",
-  2048: "bg-[#84cc16] text-port-900",
+  0: "bg-[var(--bg-muted)] text-transparent",
+  2: "bg-[#f2e5b6] text-[#171814]",
+  4: "bg-[#ebd99a] text-[#171814]",
+  8: "bg-[#e0c76e] text-[#171814]",
+  16: "bg-[#d8b54a] text-[#171814]",
+  32: "bg-[#c9a63f] text-[#171814]",
+  64: "bg-[#b8942f] text-[#f5f4ee]",
+  128: "bg-[#c8f04d] text-[#171a10]",
+  256: "bg-[#b8e03d] text-[#171a10]",
+  512: "bg-[#f59a51] text-[#171814]",
+  1024: "bg-[#ef6c58] text-[#f5f4ee]",
+  2048: "bg-[#8da85a] text-[#171814]",
 };
 
 export default function Game2048({
