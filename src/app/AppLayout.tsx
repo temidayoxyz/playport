@@ -17,7 +17,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-dvh flex-col">
       {!isGame && <Header />}
-      <main className={`flex-1 ${showPortChrome ? "safe-pb-nav md:pb-0" : ""}`}>
+      <main className={`flex-1 overflow-x-clip ${showPortChrome ? "safe-pb-nav md:pb-0" : ""}`}>
         <Outlet />
       </main>
       {showFooter && <Footer />}

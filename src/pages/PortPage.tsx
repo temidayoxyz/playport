@@ -83,7 +83,7 @@ export function PortPage() {
               <button
                 key={c.id}
                 type="button"
-                className="pp-press flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-solid)] p-4 text-left shadow-[var(--shadow-sm)]"
+                className="pp-press flex w-full min-w-0 items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-solid)] p-4 text-left shadow-[var(--shadow-sm)]"
                 onClick={() => navigate(`/category/${c.slug}`)}
               >
                 <span
