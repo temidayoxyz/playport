@@ -4,9 +4,12 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
-// GitHub Pages project site: https://<user>.github.io/playport/
+// GitHub Pages serves under /playport/; Cloudflare Workers Builds serves at the
+// Worker origin root. WorkerDeck passes the Worker name via WRANGLER_CI_OVERRIDE_NAME.
+const base = process.env.WRANGLER_CI_OVERRIDE_NAME ? "/" : "/playport/";
+
 export default defineConfig({
-  base: "/playport/",
+  base,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
